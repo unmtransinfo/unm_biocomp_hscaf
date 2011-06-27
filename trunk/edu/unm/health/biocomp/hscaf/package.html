@@ -1,0 +1,78 @@
+<HTML>
+<BODY>
+Designed for HierS scaffold analysis, for single molecules, datasets, or common-scaffold comparisons
+between pairs or groups of molecules.
+<!-- Description starts here. -->
+<H3>Functionality</H3>
+<UL>
+<LI> Analyze a molecule and identify all scaffolds, linkers and side-chains, implementing
+the HierS algorithm published by Wilkens et al. (see reference).
+<LI> Scaffold attachment points can be identified.
+<LI> Unique sets of scaffolds for a molecule or for a dataset of many molecules can be found.
+<LI> The hierarchical scaffold tree for a molecule can be generated.
+<LI> An N-attached variant of the HierS scaffold definition may be used, where atoms
+single-bonded to ring nitrogens are considered part of the scaffold.
+<LI> Maximum common scaffold of two molecules, maximum common subtrees of 
+two scaffold trees.
+</UL>
+<H3>hier_scaffolds application command line help</H3>
+<PRE>
+hier_scaffolds - HierS scaffolds analyzer
+usage: hier_scaffolds [options]
+  required:
+    -i IFILE
+    -o OFILE ... one (possibly) disconnected mol of parts per input mol
+  options:
+    -out_scaf &lt;outscafs&gt; ... unique scafs numbered sequentially
+    -inc_mol      ... include mols in output (-o)
+    -inc_scaf ... include scaffolds in output (-o)
+    -inc_link   ... include linkers in output (-o)
+    -inc_chain ... include sidechains in output (-o)
+    -scaflist_title  ... scaf/link/chain list written to title
+    -scaflist_append2title  ... scaf/link/chain list appended to title
+    -scaflist_sdtag &lt;sdtag&gt; ... scaf list written to SD dataitem
+    -maxmol &lt;max&gt;   ... max size/atoms of input mol [default=100]
+    -show_js         ... show junction points (as pseudoatoms) -- for debugging, visualizing
+    -keep_nitro_attachments ... atoms single bonded to ring N remain in scaffold
+    -v ... verbose
+    -vv ... very verbose
+    -h ... this help
+</PRE>
+<H3>Known bugs, issues</H3>
+<UL>
+<LI> No macrocycle discrimination.
+</UL>
+<H3>Developer notes</H3>
+<UL>
+<LI> Classes Scaffold, Linker and Sidechain are super-classes of JChem's Molecule.
+<LI> Mostly this implementation uses the MolBond.setSetSeq()/getSetSeq() methods
+to tag and identify junction bonds, which join scaffolds, linkers and side-chains.
+This approach is more elegant and efficient than tagging junctions via attached
+atoms.
+<LI> ChemAxon cxsmarts with smarts extensions used in this library.
+We use MolAtom.PSEUDO with alias "J" (junction), matched by cxsmarts such as "[*].[*] |$J_p;J_p$|".
+Note that MolAtom.PSEUDO=136, but w/ JChem [#136] does not match (bug?).  See
+<A HREF="http://www.chemaxon.com/marvin/help/formats/cxsmiles-doc.html">cxsmiles-doc</A>.
+One reason for this approach is that the wildcard atom MolAtom.ANY (comparable to
+[#0] in Daylight, OEChem) cannot be readily matched with JChem and is, quite logically,
+predominantly a query concept.
+</UL>
+
+<blockquote><i>
+This open source software file is provided by its author freely for use by any
+person without cost and without restriction, is not copyrighted nor governed
+by any license, is not warranted for any purpose or application, and may be
+modified in any way.  However, if guidance is needed regarding relevant
+issues such as giving and receiving help and rewards, respecting others and
+accepting and attributing credit and responsibility the reader may wish to
+consult parents, teachers, scholars or other wise elders.
+</i></blockquote>
+
+<H3>References</H3>
+<OL>
+<LI>HierS: Hierarchical Scaffold Clustering, Wilkens et al., J. Med. Chem. 2005, 48, 3182-3193.
+</OL>
+
+@author	Jeremy J Yang
+</BODY>
+</HTML>
