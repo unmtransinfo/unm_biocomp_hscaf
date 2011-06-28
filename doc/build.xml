@@ -39,7 +39,7 @@
   <target name="doc_hscaf">
     <javadoc author="true" version="true" use="true" classpath="${classpath}"
         windowtitle="hscaf API"
-        destdir="${basedir}/hscaf" > 
+        destdir="${basedir}" > 
       <fileset dir="${srcdir}" includes="edu/unm/health/biocomp/hscaf/*.java" />
       <doctitle><![CDATA[<H1>hscaf API</H1>]]></doctitle>
       <bottom><![CDATA[<I>Copyright &#169; 2011, UNM Division of Biocomputing</I>]]></bottom>
