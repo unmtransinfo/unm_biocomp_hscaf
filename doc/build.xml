@@ -1,0 +1,55 @@
+<?xml version="1.0" ?>
+
+<project name="doc"
+  basedir="."
+  default="build">
+
+  <description>
+	Documentation for HSCAF library.
+	Jeremy Yang, UNM Division of Biocomputing
+  </description>
+
+  <property environment="env" />
+  <property name="srcdir" location="${basedir}/.." />
+  <property name="libjchem" location="${env.JCHEMHOME}/lib/jchem.jar" />
+  <property name="classpath" location="${srcdir};${libjchem}" />
+
+  <target
+   name="build"
+   depends="docs"
+   description="Build all in this directory" >
+  </target>
+
+  <target
+   name="rebuild"
+   description="Rebuild all classes in this directory" >
+    <antcall target="clean"/>
+    <antcall target="build"/>
+  </target>
+
+  <target
+    name="docs"
+    description="Build all libs in this directory" >
+    <antcall target="doc_hscaf" />
+    <echo message="Build 'docs' succeeded"/>
+  </target>
+
+  <!-- Documentation -->
+
+  <target name="doc_hscaf">
+    <javadoc author="true" version="true" use="true" classpath="${classpath}"
+        windowtitle="hscaf API"
+        destdir="${basedir}/hscaf" > 
+      <fileset dir="${srcdir}" includes="edu/unm/health/biocomp/hscaf/*.java" />
+      <doctitle><![CDATA[<H1>hscaf API</H1>]]></doctitle>
+      <bottom><![CDATA[<I>Copyright &#169; 2011, UNM Division of Biocomputing</I>]]></bottom>
+    </javadoc>
+  </target>
+
+  <target name="clean">
+    <delete>
+      <fileset dir="${basedir}" includes="**/*.html"/>
+    </delete>
+  </target>
+
+</project>
