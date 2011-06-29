@@ -1,4 +1,3 @@
-#summary Getting started with unm-biocomp-hscaf
 
 = Introduction =
 
