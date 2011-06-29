@@ -12,7 +12,7 @@ The two applications are:
   * hier_scaffolds_common - search for common HierS scaffolds
 
 hier_scaffolds application command line help
-
+{{{
  hier_scaffolds - HierS scaffolds analyzer
 
  From the University of New Mexico Division of Biocomputing
@@ -38,9 +38,10 @@ hier_scaffolds application command line help
     -v ... verbose
     -vv ... very verbose
     -h ... this help
+}}}
 
 hier_scaffolds_common application command line help
-
+{{{
  hier_scaffolds_common - search for common HierS scaffolds
  
  From the University of New Mexico Division of Biocomputing
@@ -62,3 +63,4 @@ scaffold
     -v ... verbose
     -vv ... very verbose
     -h ... this help
+}}}
