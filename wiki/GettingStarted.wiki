@@ -69,15 +69,15 @@ scaffold
 
 To run the applications, download unm_biocomp_hscaf.jar and assure that JChem (v5.5+) is installed.  The jar looks for jchem.jar in either /usr/local/ChemAxon/JChem/lib/ or /home/app/ChemAxon/JChem/lib/ but it can be installed elsewhere if specified explicitly.  The jar's default main class is edu.unm.health.biocomp.hier_scaffolds.
 
+Analyze input file molecules for scaffolds:
 {{{
-java -jar unm_biocomp_hscaf.jar -i test.smi -o test_hscaf_out.smi
+java -jar unm_biocomp_hscaf.jar -i test.smi -out_scaf test_hscaf_scaf.smi -v
 }}}
 
 
+Compare query molecule with database for common scaffolds:
 {{{
 export CLASSPATH=/usr/local/ChemAxon/JChem/lib/jchem.jar
 java -classpath $CLASSPATH:unm_biocomp_hscaf.jar edu.unm.health.biocomp.hscaf.hier_scaffolds_common
- -q test_query.smi -db test_db.smi -o test_hscafcommon_out.smi
+ -q test_query.smi -db test_db.smi -o test_hscafcommon_out.smi -out_scaf test_hscafcommon_scaf.smi -v
 }}}
-
-java -classpath
