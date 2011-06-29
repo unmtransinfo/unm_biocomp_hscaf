@@ -1,0 +1,12 @@
+#summary Getting started with unm-biocomp-hscaf
+
+= Introduction =
+
+This package can be used via two Java applications or its API.  To get started it may be helpful to try the applications and learn how the algorithm works by example.
+
+
+= Details =
+
+The two applications are:
+  * hier_scaffolds
+  * hier_scaffolds_common
