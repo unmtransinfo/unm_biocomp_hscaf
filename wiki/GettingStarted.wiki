@@ -1,4 +1,3 @@
-
 = Introduction =
 
 This package can be used via two Java applications or its API.  To get started it may be helpful to try the applications and learn how the algorithm works by example.
@@ -79,4 +78,69 @@ Compare query molecule with database for common scaffolds:
 export CLASSPATH=/usr/local/ChemAxon/JChem/lib/jchem.jar
 java -classpath $CLASSPATH:unm_biocomp_hscaf.jar edu.unm.health.biocomp.hscaf.hier_scaffolds_common
  -q test_query.smi -db test_db.smi -o test_hscafcommon_out.smi -out_scaf test_hscafcommon_scaf.smi -v
+}}}
+
+= Compiling the Source Code =
+
+Ant should work to compile the source code using the following build.xml file.  First extract the code from the jarfile:
+
+  $ mkdir {builddir}
+  $ cd {builddir}
+  $ jar xf unm_biocomp_hscaf.jar
+  _(cp build.xml to {builddir})_
+  $ ant
+
+build.xml:
+
+{{{
+<?xml version="1.0" ?>
+
+<project name="all"
+  basedir="."
+  default="build">
+
+  <description>
+	HScaf library.
+	Jeremy Yang, UNM Division of Biocomputing
+  </description>
+
+  <property environment="env" />
+  <property name="libjchem" location="${env.JCHEMHOME}/lib/jchem.jar" />
+  <property name="libhscaf" location="${basedir}/unm_biocomp_hscaf.jar" />
+
+  <target name="libhscaf" >
+    <javac
+  srcdir="${basedir}/edu/unm/health/biocomp/hscaf"
+  classpath="${basedir};${basedir}/edu/unm/health/biocomp/hscaf;${libjchem}"
+     debug="true"
+     includes="*.java" >
+      <compilerarg value="-nowarn"/>
+      <compilerarg value="-Xlint:deprecation" />
+      <compilerarg value="-Xlint:-unchecked" />
+    </javac>
+    <jar destfile="${libhscaf}" >
+      <fileset dir="${basedir}"
+        includes="edu/unm/health/biocomp/hscaf/*.class,edu/unm/health/biocomp/hscaf/*.java" />
+      <fileset dir="${basedir}/doc/hscaf"
+        includes="*.html,edu/unm/health/biocomp/hscaf/*.html" />
+      <manifest>
+        <attribute name="Author" value="Jeremy Yang" />
+        <attribute name="Builder" value="${user.name}" />
+        <attribute name="Main-Class" value="edu.unm.health.biocomp.hscaf.hier_scaffolds" />
+        <attribute name="Class-Path" value="${env.JCHEMHOME}/lib/jchem.jar" />
+      </manifest>
+    </jar>
+  </target>
+
+  <target name="clean">
+    <delete>
+      <fileset dir="${basedir}" includes="**/*.class"/>
+      <fileset dir="${basedir}" includes="**/*.jar"/>
+      <fileset dir="${basedir}" includes="**/*_out.txt"/>
+      <fileset dir="${basedir}" includes="failures"/>
+    </delete>
+  </target>
+
+</project>
+
 }}}
