@@ -87,7 +87,7 @@ Ant should work to compile the source code using the following build.xml file.  
   $ mkdir {builddir}
   $ cd {builddir}
   $ jar xf unm_biocomp_hscaf.jar
-  _(cp build.xml to {builddir})_
+  $ cp {downloaddir}/build.xml .
   $ ant
 }}}
 
