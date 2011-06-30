@@ -83,12 +83,13 @@ java -classpath $CLASSPATH:unm_biocomp_hscaf.jar edu.unm.health.biocomp.hscaf.hi
 = Compiling the Source Code =
 
 Ant should work to compile the source code using the following build.xml file.  First extract the code from the jarfile:
-
+{{{
   $ mkdir {builddir}
   $ cd {builddir}
   $ jar xf unm_biocomp_hscaf.jar
   _(cp build.xml to {builddir})_
   $ ant
+}}}
 
 build.xml:
 
