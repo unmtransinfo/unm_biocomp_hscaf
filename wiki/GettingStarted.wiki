@@ -65,7 +65,7 @@ scaffold
 
 == Example commands ==
 
-To run the applications, download unm_biocomp_hscaf.jar and assure that JChem (v5.5+) is installed.  The jar looks for jchem.jar in either /usr/local/ChemAxon/JChem/lib/ or /home/app/ChemAxon/JChem/lib/ but it can be installed elsewhere if specified explicitly.  The jar's default main class is edu.unm.health.biocomp.hier_scaffolds.
+To run the applications, download unm_biocomp_hscaf.jar and assure that JChem (v5.5+) is installed.  The jar looks for jchem.jar in either /usr/local/!ChemAxon/JChem/lib/ or /home/app/!ChemAxon/JChem/lib/ but it can be installed elsewhere if specified explicitly.  The jar's default main class is edu.unm.health.biocomp.hier_scaffolds.
 
 Analyze input file molecules for scaffolds:
 {{{
