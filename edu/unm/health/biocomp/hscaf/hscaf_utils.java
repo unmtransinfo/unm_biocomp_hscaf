@@ -106,7 +106,7 @@ public class hscaf_utils
 	@return number of atoms removed
   */
   public static int rmSideChains(Molecule mol,boolean keep_nitro_attachments)
-    throws SearchException,MolFormatException,MolExportException
+    throws MolFormatException
   {
     int n_del=0;
     ArrayList<MolSearch> pats = new ArrayList<MolSearch>();
@@ -150,9 +150,14 @@ public class hscaf_utils
         pat.setTarget(mol); //must re-initialize after mol change
         int[] match;
         try { match=pat.findFirst(); }
+        catch (SearchException e) {
+          System.err.println(e.getMessage());
+          continue;
+        }
         catch (Exception e) {
           System.err.println(e.getMessage()); //ArrayIndexOutOfBoundsException: -1
-          break; }
+          break;
+        }
         if (match==null) continue;
         MolAtom atom=mol.getAtom(match[0]);
         MolAtom nbr=mol.getAtom(match[1]);
@@ -186,13 +191,14 @@ public class hscaf_utils
 	@return number of fragments removed
   */
   public static int rmPart(Molecule mol,String usmi)
-    throws MolExportException
   {
     int n_del=0;
     Molecule[] partmols=mol.convertToFrags();
     for (Molecule partmol: partmols)
     {
-      String usmi_this=partmol.exportToFormat(smifmt);
+      String usmi_this=null;
+      try { usmi_this=partmol.exportToFormat(smifmt); }
+      catch (MolExportException e) { usmi_this=""; }
       if (usmi_this.equals(usmi)) { ++n_del; }
       else { mol.fuse(partmol,true); }
     }

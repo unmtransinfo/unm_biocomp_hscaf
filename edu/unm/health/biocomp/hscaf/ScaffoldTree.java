@@ -3,7 +3,7 @@ package edu.unm.health.biocomp.hscaf;
 import java.io.*;
 import java.util.*;
 import java.util.regex.*;
-
+import com.sleepycat.je.DatabaseException;
 import chemaxon.formats.*;
 import chemaxon.sss.search.*;
 import chemaxon.struc.*;
@@ -24,6 +24,7 @@ import chemaxon.marvin.io.MolExportException;
 	@see edu.unm.health.biocomp.hscaf.Linker
 	@see edu.unm.health.biocomp.hscaf.Sidechain
 	@see edu.unm.health.biocomp.hscaf.hscaf_utils
+	@see edu.unm.health.biocomp.hscaf.ScaffoldStore
 	@author Jeremy J Yang
 */
 public class ScaffoldTree
@@ -43,12 +44,14 @@ public class ScaffoldTree
   /**	Create ScaffoldTree by analyzing input molecule&#46;  All scaffolds will
 	be found and associated with the root scaffold, a&#46;k&#46;a&#46; the 
 	Bemis-Murko framework&#46;  If input molecule is multi-fragment,
-	throw exception&#46;  
+	throw exception&#46;   If scafstore is provided, it will be used as a lookup
+	to avoid re-analysis of previously analyzed scaffolds&#46;
 	@param mol input molecule
 	@param keep_nitro_attachments true for N-attachments scaf definition
 	@param stereo stereo scaffolds (default non-stereo)
+	@param scafstore Berkeley DB for lookup table
   */
-  public ScaffoldTree(Molecule mol,boolean keep_nitro_attachments,boolean stereo)
+  public ScaffoldTree(Molecule mol,boolean keep_nitro_attachments,boolean stereo,ScaffoldStore scafstore)
     throws SearchException,MolFormatException,MolExportException,ScaffoldTreeException
   {
     if (mol.getFragCount()>1)
@@ -65,22 +68,43 @@ public class ScaffoldTree
     this.rootscaf = new Scaffold(this.mol,this.keep_nitro_attachments,stereo);
     this.linkers = new ArrayList<Linker>(); //default empty
     this.sidechains = new ArrayList<Sidechain>(); //default empty
-    if (this.rootscaf!=null)
+    try
     {
-      if (this.rootscaf.isLegal())
+      if (scafstore!=null && scafstore.scaffoldByCanSmi.contains(this.rootscaf.getCansmi()))
       {
-        this.rootscaf.findChildScaffolds();
-        rmJBonds(this.mol);
-        this.linkers=findLinkers(this.mol);
-        this.sidechains=findSidechains(this.mol);
+        this.rootscaf.setID(scafstore.scaffoldByCanSmi.get(this.rootscaf.getCansmi()).getId());
       }
       else
-        this.rootscaf=null;
+      {
+        if (this.rootscaf!=null)
+        {
+          if (this.rootscaf.isLegal())
+          {
+            this.rootscaf.findChildScaffolds();
+            rmJBonds(this.mol);
+            this.linkers=findLinkers(this.mol);
+            this.sidechains=findSidechains(this.mol);
+          }
+          else
+            this.rootscaf=null;
+        }
+      }
+      if (scafstore!=null) scafstore.mergeScaffoldTree(this); // Scaf IDs assigned here.
     }
+    catch (DatabaseException e)
+    {
+      System.err.println("Fatal database exception: "+e);
+      System.exit(1);
+    }
+  }
+  public ScaffoldTree(Molecule mol,boolean keep_nitro_attachments,boolean stereo)
+    throws SearchException,MolFormatException,MolExportException,ScaffoldTreeException
+  {
+    this(mol,keep_nitro_attachments,stereo,null);
   }
   /////////////////////////////////////////////////////////////////////////////
   /**	Returns list of all scaffolds, deduplicated&#46;  Note that although the child scaffolds
-	for each Scaffold are unique, for a ScaffoldSet there may be duplicates in the
+	for each Scaffold are unique, for a set there may be duplicates in the
 	hierarchy, thus this method must deduplicate&#46;
   */
   public ArrayList<Scaffold> getScaffolds()
@@ -100,7 +124,7 @@ public class ScaffoldTree
   }
   /////////////////////////////////////////////////////////////////////////////
   /**	Returns list of all scaffolds, not deduplicated&#46;  Note that although the child scaffolds
-	for each Scaffold are unique, for a ScaffoldSet there may be duplicates in the
+	for each Scaffold are unique, for a set there may be duplicates in the
 	hierarchy&#46;
   */
   public ArrayList<Scaffold> getAllScaffolds()
@@ -163,7 +187,7 @@ public class ScaffoldTree
     return this.sidechains.size();
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	SMILES representing all scaffolds as disconnected fragments;#46;
+  /**	SMILES representing all scaffolds as disconnected fragments&#46;
   */
   public String getSmiForScaffoldsGroupmol(boolean show_js)
     throws MolExportException
@@ -178,7 +202,7 @@ public class ScaffoldTree
     return groupmol.exportToFormat(cxsmifmt);
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	SMILES representing all linkers as disconnected fragments;#46;
+  /**	SMILES representing all linkers as disconnected fragments&#46;
   */
   public String getSmiForLinkersGroupmol(boolean show_js)
     throws MolExportException
@@ -193,7 +217,7 @@ public class ScaffoldTree
     return groupmol.exportToFormat(cxsmifmt);
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	SMILES representing all side-chains as disconnected fragments;#46;
+  /**	SMILES representing all side-chains as disconnected fragments&#46;
   */
   public String getSmiForSidechainsGroupmol(boolean show_js)
     throws MolExportException
