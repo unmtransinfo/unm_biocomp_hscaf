@@ -51,6 +51,7 @@ public class hier_scaffolds_utils
     String str="";
     if (scaf==null) return str;
     str+=scaf.getID();
+    //if (scaf.getID()==0) System.err.println("DEBUG(scafTreeAsString): scafid==0 for scaf: "+scaf.getCansmi());
     if (scaf.getChildCount()>0)
     {
       str+=":(";

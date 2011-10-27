@@ -18,8 +18,7 @@ import chemaxon.marvin.io.MolExportException;
 	child scaffolds&#46;  The largest scaffold of a molecule is the root scaffold
 	(a&#46;k&#46;a&#46; the Bemis-Murko framework)&#46;  For a single molecule
 	a related set of Scaffold objects represents the HierS
-	scaffold hierarchy and is implemented by class ScaffoldSet;
-	similarly a scaffold hierarchy can be defined for a database&#46;
+	scaffold hierarchy; similarly a scaffold hierarchy can be defined for a database&#46;
 	Scaffolds are by default non-stereo but may be stereo&#46;
 	<br />
 	@see edu.unm.health.biocomp.hscaf.Linker
@@ -42,6 +41,8 @@ public class Scaffold extends Molecule implements Comparable<Object>
   private Scaffold parentscaf;
   /** child scaffold[s] in hierarchy for molecule[s] */
   private ArrayList<Scaffold> childscafs;
+  /** child scaffold[s] IDs in hierarchy for molecule[s] */
+  private ArrayList<Integer> childids;
   /** canonical smiles used for equality comparison */
   private String cansmi;
   /** Kekule smiles (good for export) */
@@ -60,7 +61,7 @@ public class Scaffold extends Molecule implements Comparable<Object>
 	If molecule has no rings, return empty scaffold&#46;
   */
   public Scaffold(Molecule mol,boolean keep_nitro_attachments,boolean stereo)
-    throws MolFormatException,MolExportException,SearchException
+    throws MolFormatException
   {
     if (!stereo)
     {
@@ -70,15 +71,14 @@ public class Scaffold extends Molecule implements Comparable<Object>
     }
     this.parentscaf=null;
     this.id=0;
-    this.childscafs = new ArrayList<Scaffold>();
-    this.cansmi="";
-    this.smi="";
+    this.childscafs=null;
+    this.childids=null;
+    this.cansmi=null; // Lazily evaluated
+    this.smi=null; // Lazily evaluated
     this.keep_nitro_attachments=keep_nitro_attachments;
     this.stereo=stereo;
-    MolSearch patR = new MolSearch(); //ring matcher
-    patR.setQuery(MolImporter.importMol("[R]","smarts:"));
-    patR.setTarget(mol);
-    boolean ok=patR.isMatching();
+    int [][] sssr = mol.getSSSR();
+    boolean ok=(sssr.length>0);
     if (ok)
     {
       mol.clonecopy(this);
@@ -88,8 +88,6 @@ public class Scaffold extends Molecule implements Comparable<Object>
     {
       hscaf_utils.rmSideChains(this,keep_nitro_attachments);
       this.aromatize(MoleculeGraph.AROM_GENERAL);
-      this.cansmi=this.exportToFormat(CANSMIFMT);
-      this.smi=this.exportToFormat(smifmt);
     }
     else
       (new Molecule()).clonecopy(this); //empty molecule
@@ -102,7 +100,8 @@ public class Scaffold extends Molecule implements Comparable<Object>
     scaf.clonecopy(this);
     this.cansmi=scaf.cansmi;
     this.smi=scaf.smi;
-    this.childscafs = new ArrayList<Scaffold>();
+    this.childscafs=null;
+    this.childids=null;
     this.parentscaf=null;
     this.id=scaf.id;
   }
@@ -116,11 +115,14 @@ public class Scaffold extends Molecule implements Comparable<Object>
   /////////////////////////////////////////////////////////////////////////////
   public boolean isRoot() { return (this.parentscaf==null); }
   /////////////////////////////////////////////////////////////////////////////
-  public boolean isLeaf() { return (this.childscafs.size()==0); }
+  public boolean isLeaf()
+  {
+    return (this.childscafs==null || this.childscafs.size()==0);
+  }
   /////////////////////////////////////////////////////////////////////////////
   public boolean equals(Scaffold scaf2)
   {
-    return (this.cansmi.equals(scaf2.getCansmi()));
+    return (this.getCansmi().equals(scaf2.getCansmi()));
   }
   /////////////////////////////////////////////////////////////////////////////
   /**	Reject (1) benzene, and (2) empty scaffolds &#46;
@@ -145,8 +147,12 @@ public class Scaffold extends Molecule implements Comparable<Object>
     {
       if (cscaf.equals(scaf2)) { is_present=true; break; }
     }
-    if (!is_present) {
+    if (!is_present)
+    {
+      if (this.childscafs==null) this.childscafs = new ArrayList<Scaffold>();
       this.childscafs.add(scaf2);
+      if (this.childids==null) this.childids = new ArrayList<Integer>();
+      this.childids.add(scaf2.getID());
       return true;
     }
     return false;
@@ -161,7 +167,11 @@ public class Scaffold extends Molecule implements Comparable<Object>
     else return (this.getParentScaffold().getRootScaffold());
   }
   /////////////////////////////////////////////////////////////////////////////
-  public int getChildCount() { return this.childscafs.size(); }
+  public int getChildCount()
+  {
+    if (this.childscafs==null) return 0;
+    else return this.childscafs.size();
+  }
   /////////////////////////////////////////////////////////////////////////////
   /**	Get unique ID for dataset scope.
   */
@@ -172,25 +182,47 @@ public class Scaffold extends Molecule implements Comparable<Object>
   /////////////////////////////////////////////////////////////////////////////
   /**	Get canonical SMILES for this scaffold (as used for equality comparison)&#46;
 	Canonical SMILES are generated using JChem format Scaffold.CANSMIFMT&#46;
+	Lazy evaluation.
   */
-  public String getCansmi() { return this.cansmi; }
+  public String getCansmi()
+  {
+    if (this.cansmi==null)
+    {
+      try { this.cansmi=this.exportToFormat(this.CANSMIFMT); }
+      catch (MolExportException e) { this.cansmi=""; }
+    }
+    return this.cansmi;
+  }
   /////////////////////////////////////////////////////////////////////////////
   /**	Get Kekule SMILES for this scaffold&#46;  Recommended for export
 	as resulting SMILES will be more universally compatible with
 	other software&#46;
+	Lazy evaluation.
   */
-  public String getSmi() { return this.smi; }
+  public String getSmi()
+  {
+    this.decompress();
+    if (this.smi==null)
+    {
+      try { this.smi=this.exportToFormat(this.smifmt); }
+      catch (MolExportException e) { this.smi=""; }
+    }
+    return this.smi;
+  }
   ///////////////////////////////////////////////////////////////////////////
   /**	Get SMILES for this scaffold with junction atoms as pseudo-atoms&#46;
 	Note this is in ChemAxon cxsmiles format e&#46;g&#46;
 	"*C1CC1* |$p_J;;;;p_J$|"&#46;
   */
   public String getJsmi()
-    throws MolExportException
   {
+    this.decompress();
     Molecule scafmol=this.cloneMolecule();
     hscaf_utils.replaceJHydrogensWithJPseudoatoms(scafmol);
-    return scafmol.exportToFormat(cxsmifmt);
+    String jsmi=null;
+    try { jsmi=scafmol.exportToFormat(cxsmifmt); }
+    catch (MolExportException e) { jsmi=""; }
+    return jsmi;
   }
   ///////////////////////////////////////////////////////////////////////////
   /**	This recursive algorithm finds all child scafs&#46;  For each junction bond,
@@ -208,7 +240,7 @@ public class Scaffold extends Molecule implements Comparable<Object>
 	This method does the heavy-lifting&#46;
   */
   public int findChildScaffolds()
-    throws MolExportException,SearchException,MolFormatException
+    throws SearchException,MolFormatException
   {
     int n_cscafs=0;
     for (MolBond bond: this.getBondArray())
@@ -257,7 +289,14 @@ public class Scaffold extends Molecule implements Comparable<Object>
   ///////////////////////////////////////////////////////////////////////////
   public ArrayList<Scaffold> getChildScaffolds()
   {
+    if (this.childscafs==null) this.childscafs = new ArrayList<Scaffold>();
     return this.childscafs;
+  }
+  ///////////////////////////////////////////////////////////////////////////
+  public ArrayList<Integer> getChildIDs()
+  {
+    if (this.childids==null) this.childids = new ArrayList<Integer>();
+    return this.childids;
   }
   ///////////////////////////////////////////////////////////////////////////
   public int getAllChildCount()
@@ -292,6 +331,30 @@ public class Scaffold extends Molecule implements Comparable<Object>
       if (cscaf.equals(scaf)) return cscaf;
     }
     return null;
+  }
+  ///////////////////////////////////////////////////////////////////////////
+  /**	For storage; delete molecule object and 
+	retain canonical SMILES&#46;
+  */
+  public void compress()
+  {
+    if (this.cansmi==null) this.cansmi=this.getCansmi();
+    this.smi=null;
+    if (!this.isEmpty()) this.clear();
+  }
+  ///////////////////////////////////////////////////////////////////////////
+  /**	For storage; delete molecule object and 
+	retain canonical SMILES&#46;
+  */
+  public void decompress()
+  {
+    if (!this.isEmpty()) return; // already decompressed
+    if (this.cansmi==null) // error
+    {
+      System.err.println("DEBUG: Should not happen!");
+    }
+    try { MolImporter.importMol(this.cansmi.getBytes(),"smiles:",null,this); }
+    catch (MolFormatException e) { } // should not happen!
   }
   ///////////////////////////////////////////////////////////////////////////
 }

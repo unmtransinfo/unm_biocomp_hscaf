@@ -4,6 +4,8 @@ import java.io.*;
 import java.util.*;
 import java.util.regex.*;
 
+import com.sleepycat.je.DatabaseException; // Some versions ".db." instead of ".je."?
+
 import chemaxon.formats.*;
 import chemaxon.sss.search.*;
 import chemaxon.struc.*;
@@ -20,6 +22,8 @@ import edu.unm.health.biocomp.hscaf.ScaffoldTree;
 	@see edu.unm.health.biocomp.hscaf.Linker
 	@see edu.unm.health.biocomp.hscaf.Sidechain
 	@see edu.unm.health.biocomp.hscaf.hier_scaffolds_utils
+	@see edu.unm.health.biocomp.hscaf.ScaffoldStore
+	@see edu.unm.health.biocomp.hscaf.ScaffoldEntity
 */
 public class hier_scaffolds
 {
@@ -48,8 +52,9 @@ public class hier_scaffolds
       +"    -show_js         .......... show junctions (as pseudoatoms) -- for debugging, visualizing\n"
       +"    -keep_nitro_attachments ... atoms single bonded to ring N remain in scaffold\n"
       +"    -stereo ................... stereo scaffolds (default non-stereo)\n"
+      +"    -scratchdir ............... scratch dir [default=/tmp]\n"
       +"    -v ........................ verbose\n"
-      +"    -vv ....................... very verbose\n"
+      +"    -vv ....................... very verbose (slows process)\n"
       +"    -h ........................ this help\n");
     System.exit(1);
   }
@@ -69,6 +74,7 @@ public class hier_scaffolds
   private static Boolean keep_nitro_attachments=false;
   private static Boolean stereo=false;
   private static String smifmt="cxsmiles:u-L-l-e-d-D-p-R-f-w";
+  private static String scratchdir="/tmp";
 
   /////////////////////////////////////////////////////////////////////////////
   private static void parseCommand(String args[])
@@ -89,6 +95,7 @@ public class hier_scaffolds
       else if (args[i].equals("-stereo")) stereo=true;
       else if (args[i].equals("-scaflist_sdtag")) scaflist_sdtag=args[++i];
       else if (args[i].equals("-maxmol")) maxmol=Integer.parseInt(args[++i]);
+      else if (args[i].equals("-scratchdir")) scratchdir=args[++i];
       else if (args[i].equals("-v")) verbose=1;
       else if (args[i].equals("-vv")) verbose=2;
       else if (args[i].equals("-d")) verbose=2;
@@ -98,7 +105,7 @@ public class hier_scaffolds
   }
   /////////////////////////////////////////////////////////////////////////////
   public static void main(String[] args)
-    throws IOException
+    throws IOException,DatabaseException
   {
     parseCommand(args);
     if (ifile==null) help("Input file required.");
@@ -125,13 +132,21 @@ public class hier_scaffolds
     if (verbose>0)
       System.err.println("JChem version: "+chemaxon.jchem.version.VersionInfo.JCHEM_VERSION);
 
-    HashMap<String,Integer> scaf_usmis_global = new HashMap<String,Integer>();
+    // ScaffoldStore used to store global unique scafs.
+
+    File scratchDir = new File(scratchdir);
+    assert(!(scratchDir.exists() && scratchDir.isDirectory()));
+    ScaffoldStore scafstore = new ScaffoldStore(scratchDir);
+
     Molecule mol;
     int n_mol=0;
     int n_err=0;
     int n_mol_toobig=0;
     int n_mol_frag=0;
     int n_total_scaf=0;
+    java.util.Date t_0 = new java.util.Date();
+    java.util.Date t_i = t_0;
+    int n_chunk=100;
     for (n_mol=0;true;)
     {
       boolean ok=true;
@@ -177,7 +192,7 @@ public class hier_scaffolds
 
       ScaffoldTree scaftree=null;
       try {
-        scaftree = new ScaffoldTree(mol,keep_nitro_attachments,stereo);
+        scaftree = new ScaffoldTree(mol,keep_nitro_attachments,stereo,scafstore); // Scaf IDs assigned here.
       }
       catch (Exception e) {
         ++n_err;
@@ -190,30 +205,27 @@ public class hier_scaffolds
         System.err.print("\tn_link="+scaftree.getLinkerCount());
         System.err.println("\tn_chain="+scaftree.getSidechainCount());
       }
-      hier_scaffolds_utils.assignScaffoldIDs(scaf_usmis_global,scaftree);
+      n_total_scaf+=scaftree.getScaffoldCount();
 
-      ArrayList<Integer> scaflist = new ArrayList<Integer>(); //for this mol
+      ArrayList<Integer> scaflist = new ArrayList<Integer>(); //scafIDs for this mol
       int n_scaf=0;
       for (Scaffold scaf: scaftree.getScaffolds())
       {
         ++n_scaf;
-        scaflist.add(scaf_usmis_global.get(scaf.getCansmi()));
-        if (verbose>0)
+        scaflist.add(scaf.getID());
+        if (verbose>1)
         {
           System.err.println("\tscaf: "+n_scaf+". "+(show_js?scaf.getJsmi():scaf.getCansmi()));
-          if (verbose>1)
-          {
-            System.err.print("\t\tID="+(scaf.getID()));
-            System.err.print(" r["+(scaf.isRoot()?"x":" ")+"]");
-            System.err.print(" l["+(scaf.isLeaf()?"x":" ")+"]");
-            System.err.print(" pID="+(scaf.getParentScaffold()==null?" ":scaf.getParentScaffold().getID()));
-            System.err.println(" nc="+scaf.getChildCount());
-          }
+          System.err.print("\t\tID="+(scaf.getID()));
+          System.err.print(" r["+(scaf.isRoot()?"x":" ")+"]");
+          System.err.print(" l["+(scaf.isLeaf()?"x":" ")+"]");
+          System.err.print(" pID="+(scaf.getParentScaffold()==null?" ":scaf.getParentScaffold().getID()));
+          System.err.println(" nc="+scaf.getChildCount());
         }
         if (inc_scaf)
           outmol.fuse(scaf.cloneMolecule(),true);
       }
-      n_total_scaf+=n_scaf;
+
       if (verbose>0)
       {
         System.err.println("\t"+hier_scaffolds_utils.scafTreeAsString(scaftree.getRootScaffold()));
@@ -233,7 +245,7 @@ public class hier_scaffolds
       for (Linker link: scaftree.getLinkers())
       {
         ++n_link;
-        if (verbose>0)
+        if (verbose>1)
         {
           System.err.println("\tlinker: "+n_link+". "+(show_js?link.getJsmi():link.getSmi()));
         }
@@ -244,27 +256,32 @@ public class hier_scaffolds
       for (Sidechain chain: scaftree.getSidechains())
       {
         ++n_chain;
-        if (verbose>0)
+        if (verbose>1)
           System.err.println("\tsidechain: "+n_chain+". "+(show_js?chain.getJsmi():chain.getSmi()));
         if (inc_chain)
           outmol.fuse(chain.cloneMolecule(),true);
       }
       if (ofile!=null) { if (!writeMol(molWriter,outmol)) ++n_err; }
-    }
-    if (ofile_scaf!=null)
-    {
-      //Must output scafids as assigned and in order.
-      HashMap<Integer,String> scaf_usmis_global_rev = new HashMap<Integer,String>();
-      for (String scafsmi: scaf_usmis_global.keySet())
+      if (verbose>0 && n_mol%n_chunk==0)
       {
-        int scaf_id=scaf_usmis_global.get(scafsmi);
-        scaf_usmis_global_rev.put(scaf_id,scafsmi);
+        System.err.print(" mols: "+n_mol+"; errors: "+n_err+": ");
+        java.util.Date t_j = new java.util.Date();
+        System.err.print("elapsed time: "+time_utils.timeDeltaStr(t_0,t_j)+"; ");
+        System.err.println("last "+n_chunk+" mols: "+time_utils.timeDeltaStr(t_i,t_j));
+        t_i=t_j;
       }
-
-      for (int scaf_id=1;scaf_id<=scaf_usmis_global.size();++scaf_id)
+    }
+    int n_scaf_unique=0;
+    for (int scaf_id=1;true;++scaf_id)
+    {
+      String scafsmi=null;
+      try { scafsmi=scafstore.scaffoldById.get(scaf_id).getCanSmi(); }
+      catch (Exception e) { break; }
+      if (scafsmi==null) break;
+      ++n_scaf_unique;
+      if (ofile_scaf!=null)
       {
         Molecule scafmol=null;
-        String scafsmi=scaf_usmis_global_rev.get(scaf_id);
         try { scafmol=MolImporter.importMol(scafsmi,"smiles:"); }
         catch (Exception e) {
           System.err.println(e.getMessage());
@@ -280,10 +297,13 @@ public class hier_scaffolds
         molWriter_scaf.write(scafmol);
       }
     }
+    scafstore.removeAll();
+    scafstore.closeAll();
+    System.err.println("total elapsed time: "+time_utils.timeDeltaStr(t_0,new java.util.Date()));
     System.err.println("Total mols: "+n_mol);
     System.err.println("Errors: "+n_err);
     System.err.println("Total scaffolds found: "+n_total_scaf);
-    System.err.println("Total unique scaffolds found: "+scaf_usmis_global.size());
+    System.err.println("Total unique scaffolds found: "+n_scaf_unique);
     System.err.println("Oversized mols rejected: "+n_mol_toobig);
     System.err.println("Multi-fragment mols (largest part analyzed only): "+n_mol_frag);
   }

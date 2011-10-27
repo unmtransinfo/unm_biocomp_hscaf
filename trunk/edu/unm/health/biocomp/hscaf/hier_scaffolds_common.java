@@ -33,18 +33,18 @@ public class hier_scaffolds_common
       +"\n"
       +"usage: hier_scaffolds_common [options]\n"
       +"  required:\n"
-      +"    -q IFILE ... query molecule\n"
-      +"    -db IFILE ... db molecule[s]\n"
-      +"    -o OFILE ... common scaffold[s] ordered by size\n"
+      +"    -q IFILE .................. query molecule\n"
+      +"    -db IFILE ................. db molecule[s]\n"
+      +"    -o OFILE .................. common scaffold[s] ordered by size\n"
       +"  options:\n"
-      +"    -out_scaf <outscafs> ... unique scafs numbered sequentially\n"
-      +"    -maxmol <max>   ... max size/atoms of input mol [default=100]\n"
-      +"    -show_js         ... show junction points (as pseudoatoms) -- for debugging, visualizing\n"
+      +"    -out_scaf <outscafs> ...... unique scafs numbered sequentially\n"
+      +"    -maxmol <max> ............. max size/atoms of input mol [default=100]\n"
+      +"    -show_js .................. show junction points (as pseudoatoms) -- for debugging, visualizing\n"
       +"    -keep_nitro_attachments ... atoms single bonded to ring N remain in scaffold\n"
-      +"    -stereo ... stereo scaffolds (default is non-stereo)\n"
-      +"    -v ... verbose\n"
-      +"    -vv ... very verbose\n"
-      +"    -h ... this help\n");
+      +"    -stereo ................... stereo scaffolds (default is non-stereo)\n"
+      +"    -v ........................ verbose\n"
+      +"    -vv ....................... very verbose\n"
+      +"    -h ........................ this help\n");
     System.exit(1);
   }
   private static int verbose=0;
