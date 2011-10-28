@@ -48,20 +48,18 @@ hier_scaffolds_common application command line help
  
  usage: hier_scaffolds_common [options]
   required:
-    -q IFILE ... query molecule
-    -db IFILE ... db molecule[s]
-    -o OFILE ... common scaffold[s] ordered by size
+    -q IFILE .................. query molecule
+    -db IFILE ................. db molecule[s]
+    -o OFILE .................. common scaffold[s] ordered by size
   options:
-    -out_scaf  ... unique scafs numbered sequentially
-    -maxmol    ... max size/atoms of input mol [default=100]
-    -show_js         ... show junction points (as pseudoatoms) -- for
-debugging, visualizing
-    -keep_nitro_attachments ... atoms single bonded to ring N remain in
-scaffold
-    -stereo ... stereo scaffolds (default is non-stereo)
-    -v ... verbose
-    -vv ... very verbose
-    -h ... this help
+    -out_scaf <outscafs> ...... unique scafs numbered sequentially
+    -maxmol <max> ............. max size/atoms of input mol [default=100]
+    -show_js .................. show junction points (as pseudoatoms) -- for debugging, visualizing
+    -keep_nitro_attachments ... atoms single bonded to ring N remain in scaffold
+    -stereo ................... stereo scaffolds (default is non-stereo)
+    -v ........................ verbose
+    -vv ....................... very verbose
+    -h ........................ this help
 }}}
 
 == Example commands ==
