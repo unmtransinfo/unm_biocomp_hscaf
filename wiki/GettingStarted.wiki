@@ -106,12 +106,13 @@ build.xml:
 
   <property environment="env" />
   <property name="libjchem" location="${env.JCHEMHOME}/lib/jchem.jar" />
+  <property name="libberkeleydb" location="/usr/share/java/berkeleydb.jar" />
   <property name="libhscaf" location="${basedir}/unm_biocomp_hscaf.jar" />
 
   <target name="libhscaf" >
     <javac
   srcdir="${basedir}/edu/unm/health/biocomp/hscaf"
-  classpath="${basedir};${basedir}/edu/unm/health/biocomp/hscaf;${libjchem}"
+  classpath="${basedir};${basedir}/edu/unm/health/biocomp/hscaf;${libjchem};${libberkeleydb}"
      debug="true"
      includes="*.java" >
       <compilerarg value="-nowarn"/>
