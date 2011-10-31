@@ -74,7 +74,7 @@ java -jar unm_biocomp_hscaf.jar -i test.smi -out_scaf test_hscaf_scaf.smi -v
 
 Compare query molecule with database for common scaffolds:
 {{{
-export CLASSPATH=/usr/local/ChemAxon/JChem/lib/jchem.jar
+export CLASSPATH=/usr/local/ChemAxon/JChem/lib/jchem.jar:/usr/share/java/berkeleydb.jar
 java -classpath $CLASSPATH:unm_biocomp_hscaf.jar edu.unm.health.biocomp.hscaf.hier_scaffolds_common
  -q test_query.smi -db test_db.smi -o test_hscafcommon_out.smi -out_scaf test_hscafcommon_scaf.smi -v
 }}}
