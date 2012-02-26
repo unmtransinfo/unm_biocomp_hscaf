@@ -5,34 +5,63 @@ import java.util.*;
 import com.sleepycat.persist.model.*;
 import static com.sleepycat.persist.model.Relationship.*;
 
-/**	Scaffold entity used for storage in DB
+/**	Scaffold entity used for storage in BerkeleyDB-based ScaffoldStore&#46;
+        <br />
 	@see ScaffoldStore
-	@author Oleg Ursu, Jeremy J Yang
+	@author Jeremy J Yang
 */
 @Entity
 public class ScaffoldEntity
 {
-  @PrimaryKey(sequence="ID")  //auto, 1+
-  private int id;
+  //@PrimaryKey(sequence="ID")  //auto, 1+	... not working correctly on re-opened database, skips ahead.
+  //
+  // Auto-sequencing did not work correctly for cases where a database
+  // was re-opened, which resulted in skipping ahead (to nearest largest multiple of 100).
+  // So scaffold IDs are manually assigned 1 + count().
+  @PrimaryKey	//must assign manually as next available count+1, after [1,2,...count]
+  private long id;
 
   @SecondaryKey(relate=ONE_TO_ONE)
   private String canSmi;
 
   @SecondaryKey(relate=MANY_TO_MANY)
-  private HashSet<Integer> childIds = new HashSet<Integer>();
+  private HashSet<Long> childIds = new HashSet<Long>();
 
   @SecondaryKey(relate=MANY_TO_ONE)
-  private int parentId;
+  private long parentId;
 
-  public ScaffoldEntity(String canSmi,ArrayList<Integer> cIds) {
+  public ScaffoldEntity(Long id,String canSmi) {
+    this.id = id;
     this.canSmi = canSmi;
-    for (int id: cIds) this.childIds.add(id);
+  }
+
+  public void setChildIds(ArrayList<Long> cIds)
+  {
+    this.childIds.clear();
+    for (long id: cIds)
+    {
+      this.childIds.add(id);
+    }
+  }
+
+  public void addChildId(Long Id)
+  {
+    //System.err.println("DEBUG: (ScaffoldEntity.addChildId) id="+Id);
+    this.childIds.add(Id);
+  }
+
+  public void setParentId(Long Id) {
+    this.parentId=Id;
+  }
+
+  public long getParentId() {
+    return this.parentId;
   }
 
   @SuppressWarnings("unused")
   private ScaffoldEntity() { }
 
-  public int getId() {
+  public long getId() {
     return id;
   }
 
@@ -41,7 +70,13 @@ public class ScaffoldEntity
   }
 
   @Override
-  public String toString() {
+  public String toString()
+  {
     return canSmi + "\t" + id ;
+  }
+
+  public HashSet<Long> getChildIds()
+  {
+    return this.childIds;
   }
 }

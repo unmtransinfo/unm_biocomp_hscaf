@@ -11,8 +11,10 @@
 
   <property environment="env" />
   <property name="srcdir" location="${basedir}/.." />
+  <property name="appdir" location="/home/app" />
   <property name="libjchem" location="${env.JCHEMHOME}/lib/jchem.jar" />
-  <property name="classpath" location="${srcdir};${libjchem}" />
+  <property name="libberkeleydb" location="${appdir}/lib/berkeleydb-3.3.75.jar" />
+  <property name="classpath" location="${srcdir};${libjchem};${libberkeleydb}" />
 
   <target
    name="build"
@@ -42,7 +44,7 @@
         destdir="${basedir}" > 
       <fileset dir="${srcdir}" includes="edu/unm/health/biocomp/hscaf/*.java" />
       <doctitle><![CDATA[<H1>hscaf API</H1>]]></doctitle>
-      <bottom><![CDATA[<I>Copyright &#169; 2011, UNM Division of Biocomputing</I>]]></bottom>
+      <bottom><![CDATA[<I>Copyright &#169; 2011-2012, UNM Division of Biocomputing</I>]]></bottom>
     </javadoc>
   </target>
 

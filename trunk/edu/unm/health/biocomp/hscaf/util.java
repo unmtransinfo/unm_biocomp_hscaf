@@ -4,12 +4,12 @@ import java.io.*;
 import java.util.*;
 import java.text.*;
 
-/**	Static methods for time and date processing&#46;
+/**	Static utility methods for time and date processing, etc&#46;
 	@author Jeremy J Yang
 */
-public class time_utils
+public class util
 {
-  private time_utils() {} //disable default constructor
+  private util() {} //disable default constructor
   /////////////////////////////////////////////////////////////////////////////
   /**	Human readable file size&#46;
   */

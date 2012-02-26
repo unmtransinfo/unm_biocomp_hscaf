@@ -19,6 +19,7 @@ import edu.unm.health.biocomp.hscaf.ScaffoldTree;
 	@see edu.unm.health.biocomp.hscaf.Scaffold
 	@see edu.unm.health.biocomp.hscaf.Linker
 	@see edu.unm.health.biocomp.hscaf.Sidechain
+	@see edu.unm.health.biocomp.hscaf.ScaffoldSet
 	@see edu.unm.health.biocomp.hscaf.hier_scaffolds_utils
 */
 public class hier_scaffolds_common
@@ -37,8 +38,8 @@ public class hier_scaffolds_common
       +"    -db IFILE ................. db molecule[s]\n"
       +"    -o OFILE .................. common scaffold[s] ordered by size\n"
       +"  options:\n"
-      +"    -out_scaf <outscafs> ...... unique scafs numbered sequentially\n"
-      +"    -maxmol <max> ............. max size/atoms of input mol [default=100]\n"
+      +"    -out_scaf OUTSCAFS ........ unique scafs numbered sequentially\n"
+      +"    -maxmol MAX ............... max size/atoms of input mol [default=100]\n"
       +"    -show_js .................. show junction points (as pseudoatoms) -- for debugging, visualizing\n"
       +"    -keep_nitro_attachments ... atoms single bonded to ring N remain in scaffold\n"
       +"    -stereo ................... stereo scaffolds (default is non-stereo)\n"
@@ -84,8 +85,10 @@ public class hier_scaffolds_common
   {
     parseCommand(args);
     if (ifileQ==null) help("Input query file required.");
+    if (!(new File(ifileQ).exists())) help("Non-existent input file: "+ifileQ);
     MolImporter molReaderQ = new MolImporter(ifileQ);
     if (ifileN==null) help("Input db file required.");
+    if (!(new File(ifileN).exists())) help("Non-existent input file: "+ifileN);
     MolImporter molReaderN = new MolImporter(ifileN);
 
     MolExporter molWriter=null;
@@ -127,15 +130,16 @@ public class hier_scaffolds_common
     }
     ScaffoldTree scaftreeQ=null;
     try {
-      scaftreeQ = new ScaffoldTree(molQ,keep_nitro_attachments,stereo);
+      scaftreeQ = new ScaffoldTree(molQ,stereo,keep_nitro_attachments);
     }
     catch (Exception e) {
       System.err.println(e.getMessage());
       System.err.println("HierS failed on query mol; quitting.");
     }
 
+    // ScaffoldSet used to store global unique scafs.
+    ScaffoldSet scafset = new ScaffoldSet("scaffold set from: "+ifileQ+" and "+ifileN);
 
-    HashMap<String,Integer> scaf_usmis_global = new HashMap<String,Integer>();
     Molecule mol;
     int n_mol=0;
     int n_mcscaf=0;
@@ -186,7 +190,7 @@ public class hier_scaffolds_common
 
       ScaffoldTree scaftree=null;
       try {
-        scaftree = new ScaffoldTree(mol,keep_nitro_attachments,stereo);
+        scaftree = new ScaffoldTree(mol,stereo,keep_nitro_attachments,scafset);
       }
       catch (Exception e) {
         ++n_err;
@@ -225,7 +229,7 @@ public class hier_scaffolds_common
     System.err.println("Max common scafs found: "+n_mcscaf);
     System.err.println("Errors: "+n_err);
     System.err.println("Total scaffolds found: "+n_total_scaf);
-    //System.err.println("Total unique scaffolds found: "+scaf_usmis_global.size());
+    System.err.println("Total unique scaffolds found: "+scafset.getCount());
     System.err.println("Oversized mols rejected: "+n_mol_toobig);
     System.err.println("Multi-fragment mols (largest part analyzed only): "+n_mol_frag);
   }

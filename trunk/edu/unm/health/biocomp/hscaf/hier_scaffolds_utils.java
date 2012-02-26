@@ -24,49 +24,6 @@ public class hier_scaffolds_utils
 {
   private hier_scaffolds_utils() {} //disallow default constructor
   /////////////////////////////////////////////////////////////////////////////
-  /**	Assigns scaffold IDs to all scaffolds in tree&#46;  If scaffold is new,
-	also new ID and updates scaf_usmis_global
-  */
-  public static void assignScaffoldIDs(HashMap<String,Integer> scaf_usmis_global,
-	ScaffoldTree scaftree)
-  {
-    for (Scaffold scaf: scaftree.getAllScaffolds())
-    if (scaf_usmis_global.containsKey(scaf.getCansmi()))
-    {
-      scaf.setID(scaf_usmis_global.get(scaf.getCansmi())); //existing scafID
-    }
-    else
-    {
-      scaf.setID(scaf_usmis_global.size()+1); //new scafID
-      scaf_usmis_global.put(scaf.getCansmi(),scaf.getID());
-    }
-    return;
-  }
-  ///////////////////////////////////////////////////////////////////////////
-  /**	Generates string representing the hierarchical scaffold tree&#46;
-	e&#46;g&#46; "1:(2,3)" or "1:(2:(3,4,5),6:(4,7))"
-  */
-  public static String scafTreeAsString(Scaffold scaf)
-  {
-    String str="";
-    if (scaf==null) return str;
-    str+=scaf.getID();
-    //if (scaf.getID()==0) System.err.println("DEBUG(scafTreeAsString): scafid==0 for scaf: "+scaf.getCansmi());
-    if (scaf.getChildCount()>0)
-    {
-      str+=":(";
-      int i=0;
-      for (Scaffold cscaf: scaf.getChildScaffolds())
-      {
-        if (i>0) str+=",";
-        str+=scafTreeAsString(cscaf);
-        ++i;
-      }
-      str+=")";
-    }
-    return str;
-  }
-  ///////////////////////////////////////////////////////////////////////////
   /**	Finds maximum common scaffold in two ScaffoldTrees&#46;
 	If none returns null&#46;
   */
@@ -162,6 +119,38 @@ public class hier_scaffolds_utils
     int nB=scaftreeB.getRootScaffold().getAtomCount();
     float sim = (float)nc / (nA + nB - nc);
     return sim;
+  }
+  ///////////////////////////////////////////////////////////////////////////
+  /**	Returns simple count of all ringsystems&#46;  Equivalent to count of
+	all disconnected fragments after removing linkers&#46;  Used to 
+	estimate computational demands and identify high-cost
+	"pathological" molecules for special handling&#46;
+  */
+  public static int rawRingsystemCount(Molecule mol)
+  {
+    Molecule xmol = mol.cloneMolecule();
+    int [][] sssratoms=xmol.getSSSR();
+    HashMap<Integer,Boolean> ringatoms = new HashMap<Integer,Boolean>();
+    for (int [] sssratom: sssratoms) { for (int ratomidx: sssratom) { ringatoms.put(ratomidx,true); } }
+    ArrayList<MolAtom> nonringatoms = new ArrayList<MolAtom>();
+    for (MolAtom atom: xmol.getAtomArray())
+    {
+      if (!(ringatoms.containsKey(xmol.indexOf(atom)))) nonringatoms.add(atom);
+    }
+    for (MolAtom atom: nonringatoms) { xmol.removeAtom(atom); }
+    //Still need to remove non-ring single bonds linking rings.
+    int [][] sssrbonds=xmol.getSSSRBonds();
+    HashMap<Integer,Boolean> ringbonds = new HashMap<Integer,Boolean>();
+    for (int [] sssrbond: sssrbonds) { for (int rbondidx: sssrbond) { ringbonds.put(rbondidx,true); } }
+    ArrayList<MolBond> nonringbonds = new ArrayList<MolBond>();
+    for (MolBond bond: xmol.getBondArray())
+    {
+      if (!(ringbonds.containsKey(xmol.indexOf(bond)))) nonringbonds.add(bond);
+    }
+    for (MolBond bond: nonringbonds) { xmol.removeBond(bond); }
+    int count=xmol.getFragCount();
+    //int count=xmol.getFragCount(MoleculeGraph.FRAG_BASIC);
+    return count;
   }
   ///////////////////////////////////////////////////////////////////////////
 }
