@@ -8,14 +8,14 @@ import chemaxon.struc.*;
 import chemaxon.sss.search.*;
 import chemaxon.marvin.io.MolExportException;
  
-/**	Represents any single HierS scaf, which may be either
-	<OL>
-	<LI> a leaf scaffold in a HierS tree (no linkers) or
-	<LI> a super-scaffold built from 2+ child scaffolds and 1+ linker[s]
-	</OL>
-	A super-scaffold may also contain one or more smaller super-scaffolds,
-	hence each scaffold has zero or one parent scaffold and zero or more
-	child scaffolds&#46;  The largest scaffold of a molecule is the root scaffold
+/**	Represents any single HierS scaffold, which may contain zero,
+	or two or more child scaffolds&#46;  A scaffold with zero child
+	scaffolds is called a leaf scaffold&#46;  Each scaffold has a unique
+	set of child scaffolds&#46;  However, a scaffold may have multiple
+	parent scaffolds, in a scaffold tree context or a scaffold
+	database context, since the same scaffold may be present in
+	multiple locations within one molecule or multiple molecules&#46;
+	The largest scaffold of a molecule is the root scaffold
 	(a&#46;k&#46;a&#46; the Bemis-Murko framework)&#46;  For a single molecule
 	a related set of Scaffold objects represents the HierS
 	scaffold hierarchy; similarly a scaffold hierarchy can be defined for a database&#46;
@@ -41,14 +41,12 @@ public class Scaffold extends Molecule implements Comparable<Object>
   private Scaffold parentscaf;
   /** child scaffold[s] in hierarchy for molecule[s] */
   private ArrayList<Scaffold> childscafs;
-  /** child scaffold[s] IDs in hierarchy for molecule[s] */
-  private ArrayList<Integer> childids;
   /** canonical smiles used for equality comparison */
   private String cansmi;
   /** Kekule smiles (good for export) */
   private String smi;
   /** unique ID for dataset scope */
-  private Integer id;
+  private Long id;
   /** flag applies to scaf and all children */
   private boolean keep_nitro_attachments;
   /** flag applies to scaf and all children */
@@ -60,7 +58,7 @@ public class Scaffold extends Molecule implements Comparable<Object>
 	and explicit hydrogens are added at each junction bond&#46;
 	If molecule has no rings, return empty scaffold&#46;
   */
-  public Scaffold(Molecule mol,boolean keep_nitro_attachments,boolean stereo)
+  public Scaffold(Molecule mol,boolean stereo,boolean keep_nitro_attachments)
     throws MolFormatException
   {
     if (!stereo)
@@ -70,9 +68,8 @@ public class Scaffold extends Molecule implements Comparable<Object>
       this.cxsmifmt+="+0"; //non-stereo
     }
     this.parentscaf=null;
-    this.id=0;
+    this.id=0L;
     this.childscafs=null;
-    this.childids=null;
     this.cansmi=null; // Lazily evaluated
     this.smi=null; // Lazily evaluated
     this.keep_nitro_attachments=keep_nitro_attachments;
@@ -93,6 +90,16 @@ public class Scaffold extends Molecule implements Comparable<Object>
       (new Molecule()).clonecopy(this); //empty molecule
   }
   /////////////////////////////////////////////////////////////////////////////
+  /**   Initialized molecule from smiles and call usual constructor&#46;
+  */
+  public Scaffold(String smiles,Boolean stereo,Boolean keep_nitro_attachments)
+    throws MolFormatException
+  {
+    this(new Molecule(),stereo,keep_nitro_attachments);
+    try { MolImporter.importMol(smiles.getBytes(),"smiles:",null,this); }
+    catch (MolFormatException e) { } // should not happen!
+  }
+  /////////////////////////////////////////////////////////////////////////////
   /**	Copy constructor&#46;
   */
   public Scaffold(Scaffold scaf)
@@ -101,7 +108,6 @@ public class Scaffold extends Molecule implements Comparable<Object>
     this.cansmi=scaf.cansmi;
     this.smi=scaf.smi;
     this.childscafs=null;
-    this.childids=null;
     this.parentscaf=null;
     this.id=scaf.id;
   }
@@ -131,30 +137,45 @@ public class Scaffold extends Molecule implements Comparable<Object>
   */
   public boolean isLegal()
   {
+    if (this.isEmpty()) this.decompress();
     if (this.getAtomCount()==0) return false;
     if (this.getCansmi().equals("c1ccccc1")) return false; //benzene disallowed
     if (this.getCansmi().equals("C1=CC=CC=C1")) return false; //benzene disallowed
+    //System.err.println("DEBUG: (isLegal) true ; cansmi: "+this.getCansmi());
     return true;
   }
   /////////////////////////////////////////////////////////////////////////////
   /**	Adds child scaffold if new and legal&#46;
   */
-  private boolean addChild(Scaffold scaf2)
+  public boolean addChild(Scaffold scaf2)
   {
+    if (this.childscafs==null) this.childscafs = new ArrayList<Scaffold>();
     if (!scaf2.isLegal()) return false;
-    boolean is_present=false;
+    boolean is_already_child=false;
     for (Scaffold cscaf: this.getChildScaffolds())
     {
-      if (cscaf.equals(scaf2)) { is_present=true; break; }
+      if (cscaf.equals(scaf2)) { is_already_child=true; break; }
     }
-    if (!is_present)
+    //System.err.println("DEBUG: (addChild) is_already_child="+is_already_child+" cansmi: "+scaf2.getCansmi());
+    if (!is_already_child)
     {
-      if (this.childscafs==null) this.childscafs = new ArrayList<Scaffold>();
       this.childscafs.add(scaf2);
-      if (this.childids==null) this.childids = new ArrayList<Integer>();
-      this.childids.add(scaf2.getID());
       return true;
     }
+//    else  //replace (replacement may be stored and have known children).
+//    {
+//      for (int i=0; i<this.childscafs.size(); ++i)
+//      {
+//        Scaffold cscaf=this.childscafs.get(i);
+//        if (cscaf.equals(scaf2))
+//        {
+//          System.err.println("DEBUG: (addChild) i="+i);
+//          this.childscafs.add(i,scaf2);
+//          break;
+//        }
+//      }
+//    }
+    //System.err.println("DEBUG: (addChild) leaving...");
     return false;
   }
   /////////////////////////////////////////////////////////////////////////////
@@ -175,10 +196,10 @@ public class Scaffold extends Molecule implements Comparable<Object>
   /////////////////////////////////////////////////////////////////////////////
   /**	Get unique ID for dataset scope.
   */
-  public int getID() { return this.id; }
+  public long getID() { return this.id; }
   /**	Set unique ID for dataset scope.
   */
-  public void setID(int id2) { this.id=id2; }
+  public void setID(long id2) { this.id=id2; }
   /////////////////////////////////////////////////////////////////////////////
   /**	Get canonical SMILES for this scaffold (as used for equality comparison)&#46;
 	Canonical SMILES are generated using JChem format Scaffold.CANSMIFMT&#46;
@@ -293,10 +314,12 @@ public class Scaffold extends Molecule implements Comparable<Object>
     return this.childscafs;
   }
   ///////////////////////////////////////////////////////////////////////////
-  public ArrayList<Integer> getChildIDs()
+  public ArrayList<Long> getChildIDs()
   {
-    if (this.childids==null) this.childids = new ArrayList<Integer>();
-    return this.childids;
+    ArrayList<Long> childids = new ArrayList<Long>();
+    for (Scaffold cscaf: this.getChildScaffolds())
+      childids.add(cscaf.getID());
+    return childids;
   }
   ///////////////////////////////////////////////////////////////////////////
   public int getAllChildCount()
@@ -333,6 +356,30 @@ public class Scaffold extends Molecule implements Comparable<Object>
     return null;
   }
   ///////////////////////////////////////////////////////////////////////////
+  /**   Generates string representing the hierarchical scaffold sub tree
+	rooted by this scaffold&#46;
+        e&#46;g&#46; "1:(2,3)" or "1:(2:(3,4,5),6:(4,7))"
+  */
+  public String subTreeAsString()
+  {
+    if (this==null) return "";
+    String str=""+this.getID();
+    //if (this.getID()==0) System.err.println("DEBUG: (subTreeAsString) ID=0 ; cansmi: "+this.getCansmi());
+    if (this.getChildCount()>0)
+    {
+      str+=":(";
+      int i=0;
+      for (Scaffold cscaf: this.getChildScaffolds())
+      {
+        if (i>0) str+=",";
+        str+=cscaf.subTreeAsString();
+        ++i;
+      }
+      str+=")";
+    }
+    return str;
+  }
+  ///////////////////////////////////////////////////////////////////////////
   /**	For storage; delete molecule object and 
 	retain canonical SMILES&#46;
   */
@@ -355,6 +402,16 @@ public class Scaffold extends Molecule implements Comparable<Object>
     }
     try { MolImporter.importMol(this.cansmi.getBytes(),"smiles:",null,this); }
     catch (MolFormatException e) { } // should not happen!
+  }
+  ///////////////////////////////////////////////////////////////////////////
+  public Boolean isStereo()
+  {
+    return this.stereo;
+  }
+  ///////////////////////////////////////////////////////////////////////////
+  public Boolean isKeep_nitro_attachments()
+  {
+    return this.keep_nitro_attachments;
   }
   ///////////////////////////////////////////////////////////////////////////
 }

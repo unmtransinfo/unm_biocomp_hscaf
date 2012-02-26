@@ -11,20 +11,47 @@ import chemaxon.util.MolHandler;
 import chemaxon.marvin.io.MolExportException;
  
 /////////////////////////////////////////////////////////////////////////////
-/**	Comprised of a set of hierarchical scaffolds each a Scaffold
-	object&#46;
+/**	Comprised of a set of hierarchical scaffolds each a Scaffold object&#46;
+	Each input molecule has an associated ScaffoldTree, a hierarchical
+	tree of Scaffolds, the largest of which is the root scaffold
+	(and the Bemis-Murko framework)&#46;  The ScaffoldTree object
+	does not contain the Scaffold objects, which may be contained
+	in a ScaffoldSet or re-constructed from ScaffoldStore
+	ScaffoldEntitys&#46;
+	The ScaffoldTree object also contains the Linkers and Sidechains
+	for the input molecule, and a copy of the input molecule&#46;
 	<br />
-	To do:
-	[ ] If scaffold already in tree, save CPU, do not re-analyze, copy sub-tree
-	or maybe cross-link&#46;  Maybe eventually avoid re-analysis for entire
-	dataset&#46;
-	<br />
+	[Implementation notes] Here are the steps in perceiving the scaffolds
+	of an input molecule:
+	<ol>
+	<li> ScaffoldTree constructor called by application with input molecule
+	as parameter, and either a ScaffoldSet or ScaffoldStore instance, which
+	stores known scaffolds, for output to unique list, and to avoid
+	re-analysis of previously encountered scaffolds, and thereby
+	enhance performance&#46;
+	<li> The application may elect to use ScaffoldStore, which uses
+	BerkeleyDB, for large datasets&#46;  ScaffoldSet in-memory storage is
+	faster but may exhaust available memory for large datasets&#46;
+	<li> For each input molecule, a complete ScaffoldTree is built&#46;
+	When ScaffoldSet is used, the ScaffoldTree references Scaffold instances 
+	which are contained in the ScaffoldSet&#46;  When ScaffoldStore is used,
+	all Scaffold instances must be re-constructed from ScaffoldEntity
+	objects&#46;
+	<li> The perception of scaffolds from a molecule is accomplished by:
+	<ul>
+	<li> hscaf_utils.tagJunctions() - tags junction bonds
+	<li> hscaf_utils.findChildScaffolds() - breaks one junction bond, then
+	analyzes each part as candidate scaffold, then recurse  for each part until
+	no more junctions&#46; 
+	</ul>
+	</ol>
 	@see edu.unm.health.biocomp.hscaf.Linker
 	@see edu.unm.health.biocomp.hscaf.Scaffold
 	@see edu.unm.health.biocomp.hscaf.Linker
 	@see edu.unm.health.biocomp.hscaf.Sidechain
 	@see edu.unm.health.biocomp.hscaf.hscaf_utils
 	@see edu.unm.health.biocomp.hscaf.ScaffoldStore
+	@see edu.unm.health.biocomp.hscaf.ScaffoldEntity
 	@author Jeremy J Yang
 */
 public class ScaffoldTree
@@ -51,11 +78,13 @@ public class ScaffoldTree
 	@param stereo stereo scaffolds (default non-stereo)
 	@param scafstore Berkeley DB for lookup table
   */
-  public ScaffoldTree(Molecule mol,boolean keep_nitro_attachments,boolean stereo,ScaffoldStore scafstore)
-    throws SearchException,MolFormatException,MolExportException,ScaffoldTreeException
+  public ScaffoldTree(Molecule mol,boolean stereo,boolean keep_nitro_attachments,
+        ScaffoldSet scafset,ScaffoldStore scafstore)
+    throws SearchException,MolFormatException,MolExportException,ScaffoldException
   {
+    //System.err.println("DEBUG: (ScaffoldTree) ...");
     if (mol.getFragCount()>1)
-      throw new ScaffoldTreeException("Cannot analyze multi-fragment molecule.");
+      throw new ScaffoldException("Cannot analyze multi-fragment molecule.");
     this.inmol=mol.cloneMolecule();
     this.mol=mol.cloneMolecule();
     this.keep_nitro_attachments=keep_nitro_attachments;
@@ -68,39 +97,66 @@ public class ScaffoldTree
     this.rootscaf = new Scaffold(this.mol,this.keep_nitro_attachments,stereo);
     this.linkers = new ArrayList<Linker>(); //default empty
     this.sidechains = new ArrayList<Sidechain>(); //default empty
+    if (this.rootscaf==null) return;
     try
     {
       if (scafstore!=null && scafstore.scaffoldByCanSmi.contains(this.rootscaf.getCansmi()))
       {
-        this.rootscaf.setID(scafstore.scaffoldByCanSmi.get(this.rootscaf.getCansmi()).getId());
+	ScaffoldEntity scent = scafstore.scaffoldByCanSmi.get(this.rootscaf.getCansmi());
+        long id = scent.getId();
+        this.rootscaf.setID(id);
+      }
+      else if  (scafset!=null && scafset.containsScaffold(this.rootscaf)) // Scaf present in scafset?
+      {
+        // Replace root scaffold with stored instance.
+        this.rootscaf=scafset.getScaffoldByID(scafset.getScaffoldID(this.rootscaf));
       }
       else
       {
-        if (this.rootscaf!=null)
+        if (this.rootscaf.isLegal())
         {
-          if (this.rootscaf.isLegal())
-          {
-            this.rootscaf.findChildScaffolds();
-            rmJBonds(this.mol);
-            this.linkers=findLinkers(this.mol);
-            this.sidechains=findSidechains(this.mol);
-          }
-          else
-            this.rootscaf=null;
+          hscaf_utils.findChildScaffolds(this.rootscaf,scafset,scafstore);
+          //System.err.println("DEBUG: (ScaffoldTree) back from findChildScaffolds  ...");
+          rmJBonds(this.mol);
+          this.linkers=findLinkers(this.mol);
+          this.sidechains=findSidechains(this.mol);
         }
+        else
+          this.rootscaf=null;
       }
-      if (scafstore!=null) scafstore.mergeScaffoldTree(this); // Scaf IDs assigned here.
+      if (this.rootscaf!=null)
+      {
+        if (scafset!=null) scafset.mergeScaffoldTree(this.rootscaf); // Scaf IDs assigned here.
+        if (scafstore!=null) scafstore.mergeScaffoldTree(this.rootscaf); // Scaf IDs assigned here.
+      }
     }
     catch (DatabaseException e)
     {
       System.err.println("Fatal database exception: "+e);
       System.exit(1);
     }
+    //System.err.println("DEBUG: (ScaffoldTree) leaving ...");
   }
-  public ScaffoldTree(Molecule mol,boolean keep_nitro_attachments,boolean stereo)
-    throws SearchException,MolFormatException,MolExportException,ScaffoldTreeException
+  /**   No ScaffoldStore&#46;
+  */
+  public ScaffoldTree(Molecule mol,boolean keep_nitro_attachments,boolean stereo,ScaffoldSet scafset)
+    throws SearchException,MolFormatException,MolExportException,ScaffoldException
   {
-    this(mol,keep_nitro_attachments,stereo,null);
+    this(mol,keep_nitro_attachments,stereo,scafset,null);
+  }
+  /**   No ScaffoldSet&#46;
+  */
+  public ScaffoldTree(Molecule mol,boolean keep_nitro_attachments,boolean stereo,ScaffoldStore scafstore)
+    throws SearchException,MolFormatException,MolExportException,ScaffoldException
+  {
+    this(mol,keep_nitro_attachments,stereo,null,scafstore);
+  }
+  /**   No ScaffoldStore, no ScaffoldSet&#46;
+  */
+  public ScaffoldTree(Molecule mol,boolean keep_nitro_attachments,boolean stereo)
+    throws SearchException,MolFormatException,MolExportException,ScaffoldException
+  {
+    this(mol,keep_nitro_attachments,stereo,null,null);
   }
   /////////////////////////////////////////////////////////////////////////////
   /**	Returns list of all scaffolds, deduplicated&#46;  Note that although the child scaffolds
@@ -110,7 +166,7 @@ public class ScaffoldTree
   public ArrayList<Scaffold> getScaffolds()
   {
     ArrayList<Scaffold> scafs = new ArrayList<Scaffold>();
-    ArrayList<String> usmis = new ArrayList<String>();
+    ArrayList<String> usmis = new ArrayList<String>(); //should be HashSet<String,Boolean>
     if (this.rootscaf==null) return scafs;
     scafs.add(this.rootscaf);
     usmis.add(this.rootscaf.getCansmi());
@@ -335,6 +391,13 @@ public class ScaffoldTree
       }
     }
     return chains;
+  }
+  ///////////////////////////////////////////////////////////////////////////
+  public String toString()
+  {
+    if (this.getRootScaffold()==null) return "";
+    String str="";
+    return this.getRootScaffold().subTreeAsString();
   }
   ///////////////////////////////////////////////////////////////////////////
 }

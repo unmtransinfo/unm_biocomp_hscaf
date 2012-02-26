@@ -10,9 +10,12 @@ import chemaxon.struc.*;
 import chemaxon.util.MolHandler;
 import chemaxon.marvin.io.MolExportException;
 import chemaxon.calculations.TopologyAnalyser;
+
+import com.sleepycat.je.DatabaseException;
+
  
 /**	Contains internal static functions used in hierarchical scaffold analysis&#46; 
-	Not recommended for use by applications&#46;  (Only public for javadoc&#46;)
+	Not normally recommended for use by applications&#46;
 	<br />
 	This file contains some experimental code in development not
 	yet utilized, eventually to improve efficiency and reduce 
@@ -29,6 +32,114 @@ public class hscaf_utils
 {
   private static final String smifmt="cxsmiles:u-L-l-e-d-D-p-R-f-w";
   private hscaf_utils() {} //disallow default constructor
+  private static final int HSCAF_MAX_COMPUTE_TIME=600;	//Max compute time in sec.
+  ///////////////////////////////////////////////////////////////////////////
+  /**   This recursive algorithm finds all child scaffolds&#46;  For each junction bond,
+        copy scaffold and cut bond, resulting in two parts which may be valid
+        scaffolds (sidechains have been deleted, but one part may comprise
+        invalid scaffold benzene)&#46; Special case is junction bonds to hydrogens,
+        which denote attachment points&#46; Then recurse and find grandchild scaffolds
+        for each child scaffold&#46;  For simple 2-way linkers it is redundant to cut both
+        junctions of a linker, but for (3+)-way linkers this allows enumeration of all
+        combinations&#46;  For each scaffold found, if unique (via canonical smiles),
+        add new child and specify its parentage&#46; If no junction bonds exist,
+        findChildScaffolds() returns null, recursion terminates, and the current
+        scaffold is a leaf&#46; The heavy-lifting goes through this method&#46;
+	ScaffoldSet and ScaffoldStore store known scaffolds to avoid costly
+	re-analysis&#46;  With ScaffoldSet, if scaffold already known, use
+	existing scaffold object, not new child candidate object&#46;  With
+	ScaffoldStore, new object must be used&#46;
+  */
+  public static int findChildScaffolds(Scaffold scaf,ScaffoldSet scafset,ScaffoldStore scafstore)
+    throws SearchException,MolFormatException,DatabaseException
+  {
+    int n_cscafs=0;
+    //System.err.println("DEBUG: (findChildScaffolds) ...");
+    for (MolBond bond: scaf.getBondArray())
+    {
+      if (bond.getSetSeq()>0)
+      {
+        int bidx=scaf.indexOf(bond); //Note: bond idxs must be same in mol clone.
+        Molecule scafmol = scaf.cloneMolecule();
+        MolBond jbond=scafmol.getBond(bidx);
+        MolAtom a1=jbond.getAtom1();
+        MolAtom a2=jbond.getAtom2();
+        if (a1.getAtno()==1 || a2.getAtno()==1) continue; //junction-atoms
+        MolAtom h_new1 = new MolAtom(1);
+        MolAtom h_new2 = new MolAtom(1);
+        scafmol.add(h_new1);
+        scafmol.add(h_new2);
+        MolBond b_new1 = new MolBond(h_new1,a1,jbond.getType());
+        MolBond b_new2 = new MolBond(h_new2,a2,jbond.getType());
+        scafmol.add(b_new1);
+        scafmol.add(b_new2);
+        b_new1.setSetSeq(jbond.getSetSeq());
+        b_new2.setSetSeq(jbond.getSetSeq());
+        scafmol.removeBond(jbond);
+        for (Molecule partmol: scafmol.convertToFrags()) //should be 2
+        {
+          Scaffold cscaf = new Scaffold(partmol,scaf.isStereo(),scaf.isKeep_nitro_attachments());
+          // Check: has scaf been seen already in this tree?  If yes save time, use foundscaf.
+          Scaffold foundscaf=scaf.getRootScaffold().findChildScaffold(cscaf);
+          if (foundscaf!=null)
+          {
+            boolean ok=scaf.addChild(foundscaf);
+            ++n_cscafs;
+            n_cscafs+=foundscaf.getAllChildCount();
+          }
+          // Check: is scaf already in scafset?  If yes save time, use foundscaf.
+          else if (scafset!=null && scafset.containsScaffold(cscaf))
+          {
+            foundscaf=scafset.findScaffold(cscaf);
+            //System.err.println("DEBUG: (findChildScaffolds) found in scafset: "+cscaf.getCansmi());
+            boolean ok=scaf.addChild(foundscaf);
+            //System.err.println("DEBUG: (findChildScaffolds) found in scafset: ID="+foundscaf.getID()+" "+foundscaf.getCansmi()+" addChild="+ok);
+            ++n_cscafs;
+            n_cscafs+=foundscaf.getAllChildCount();
+          }
+          // Check: is scaf already in scafstore?  If yes save time.
+          // Surprisingly this does not save time!?
+          else if (scafstore!=null && scafstore.scaffoldByCanSmi.contains(cscaf.getCansmi()))
+          {
+            ScaffoldEntity scent = scafstore.scaffoldByCanSmi.get(cscaf.getCansmi());
+            cscaf.setID(scent.getId());
+            boolean ok=scaf.addChild(cscaf);
+            ++n_cscafs;
+            cscaf.setParentScaffold(scaf);
+            scafstore.populateScaffoldTree(cscaf);
+            n_cscafs+=cscaf.getAllChildCount();
+          }
+          else
+          {
+            boolean ok=scaf.addChild(cscaf);
+            ++n_cscafs;
+            cscaf.setParentScaffold(scaf);
+            n_cscafs+=findChildScaffolds(cscaf,scafset,scafstore); //recurse; size=0 if leaf
+          }
+        }
+      }
+    }
+    //System.err.println("DEBUG: (findChildScaffolds) leaving; n_cscafs: "+n_cscafs);
+    return n_cscafs;
+  }
+  /////////////////////////////////////////////////////////////////////////////
+  /**   Re-create Scaffold and all offspring as stored for use as sub-tree,
+        etc&#46;
+  */
+  public static Scaffold entity2Scaffold(ScaffoldStore scafstore,ScaffoldEntity scent)
+        throws MolFormatException,DatabaseException
+  {
+    Scaffold scaf = new Scaffold(scent.getCanSmi(),scafstore.isStereo(),scafstore.isKeep_nitro_attachments());
+    scaf.setID(scent.getId());
+    for (long id: scent.getChildIds())
+    {
+      ScaffoldEntity cscent = scafstore.scaffoldById.get(id);
+      Scaffold cscaf = entity2Scaffold(scafstore,cscent);       //recurse
+      boolean ok=scaf.addChild(cscaf);
+      cscaf.setParentScaffold(scaf);
+    }
+    return scaf;
+  }
   /////////////////////////////////////////////////////////////////////////////
   /**	Tag junction bonds joining scafs, linkers and sidechains, using 
 	MolBond.setSetseq()&#46;  Set to unique connection ID &gt;1&#46;  
