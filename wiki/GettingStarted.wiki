@@ -21,21 +21,29 @@ hier_scaffolds application command line help
     -i IFILE
     -o OFILE .................. one (possibly) disconnected mol of parts per input mol
   options:
-    -out_scaf <outscafs> ...... unique scafs numbered sequentially
-    -inc_mol      ............. include mols in output (-o)
+    -out_scaf OUTSCAFS ........ unique scafs numbered sequentially (new + db)
+    -inc_mol .................. include mols in output (-o)
     -inc_scaf ................. include scaffolds in output (-o)
-    -inc_link   ............... include linkers in output (-o)
+    -inc_link ................. include linkers in output (-o)
     -inc_chain ................ include sidechains in output (-o)
     -scaflist_title  .......... scaf/link/chain list written to title
-    -scaflist_append2title  ... scaf/link/chain list appended to title
-    -scaflist_sdtag <sdtag> ... scaf list written to SD dataitem
-    -maxmol <max>   ........... max size/atoms of input mol [default=100]
-    -show_js         .......... show junctions (as pseudoatoms) -- for debugging, visualizing
+    -scaflist_append2title .... scaf/link/chain list appended to title
+    -scaflist_sdtag SDTAG ..... scaf list written to SD dataitem
+    -maxatoms MAX ............. max atom count of input mol [default=100]
+    -maxrings MAX ............. max ring count of input mol [no default]
+    -show_js .................. show junctions (as pseudoatoms) -- for debugging, visualizing
     -keep_nitro_attachments ... atoms single bonded to ring N remain in scaffold
     -stereo ................... stereo scaffolds (default non-stereo)
-    -scratchdir ............... scratch dir [default=/tmp]
+    -dbdir DBDIR .............. scratch dir for db files [default=/tmp/hscaf]
+    -keepdb ................... keep scratch db files
+    -destroyexistingdb ........ initially destroy existing db at DBDIR
+    -nodb ..................... do not use BerkeleyDB for storage and performance
+    -resume ................... resume job using kept scratch db files
+    -nmax NMAX ................ quit after NMAX molecules
+    -nskip NSKIP .............. skip NSKIP molecules
     -v ........................ verbose
-    -vv ....................... very verbose (slows process)
+    -vv ....................... very verbose
+    -vvv or -debug ............ very very verbose (slows process)
     -h ........................ this help
 }}}
 
@@ -52,8 +60,8 @@ hier_scaffolds_common application command line help
     -db IFILE ................. db molecule[s]
     -o OFILE .................. common scaffold[s] ordered by size
   options:
-    -out_scaf <outscafs> ...... unique scafs numbered sequentially
-    -maxmol <max> ............. max size/atoms of input mol [default=100]
+    -out_scaf OUTSCAFS ........ unique scafs numbered sequentially
+    -maxmol MAX ............... max size/atoms of input mol [default=100]
     -show_js .................. show junction points (as pseudoatoms) -- for debugging, visualizing
     -keep_nitro_attachments ... atoms single bonded to ring N remain in scaffold
     -stereo ................... stereo scaffolds (default is non-stereo)
