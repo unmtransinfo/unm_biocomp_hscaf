@@ -2,7 +2,7 @@
 
 This package can be used via two Java applications or its API.  To get started it may be helpful to try the applications and learn how the algorithm works by example.
 
-[quinine_hscaf.png]
+[file:quinine_hscaf.png]
 
 = Using the Applications =
 
