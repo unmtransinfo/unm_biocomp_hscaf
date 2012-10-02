@@ -34,13 +34,13 @@ public class Linker extends Molecule
 	and junction pseudo atoms remain at each junction bond&#46;
   */
   public Linker(Molecule mol)
-    throws MolFormatException,MolExportException,SearchException
+    throws MolFormatException,SearchException,MolExportException,IOException
   {
     mol.clonecopy(this);
     this.degree=pruneLinker(this);
     hscaf_utils.replaceJPseudoatomsWithJHydrogens(this);
-    this.cansmi=this.exportToFormat(cansmifmt);
-    this.smi=this.exportToFormat(smifmt);
+    this.cansmi=MolExporter.exportToFormat(this,cansmifmt);
+    this.smi=MolExporter.exportToFormat(this,smifmt);
     this.id=0;
   }
   /////////////////////////////////////////////////////////////////////////////
@@ -73,11 +73,11 @@ public class Linker extends Molecule
 	"*CCC* |$p_J;;;;p_J$|"&#46;
   */
   public String getJsmi()
-    throws MolExportException
+    throws MolExportException,IOException
   {
     Molecule linkmol=this.cloneMolecule();
     hscaf_utils.replaceJHydrogensWithJPseudoatoms(linkmol);
-    return linkmol.exportToFormat(cxsmifmt);
+    return MolExporter.exportToFormat(linkmol,cxsmifmt);
   }
   ///////////////////////////////////////////////////////////////////////////
   /**   Removes side-chains from linker, retains only shortest path and atoms multiply

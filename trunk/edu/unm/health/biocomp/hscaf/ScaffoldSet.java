@@ -35,6 +35,15 @@ public class ScaffoldSet
   private HashMap<String,Scaffold> scafhash;
   private HashMap<Long,Scaffold> idhash;
   /////////////////////////////////////////////////////////////////////////////
+  /**	Default constructor&#46;
+  */
+  public ScaffoldSet()
+  {
+    this.name="";
+    this.scafhash = new HashMap<String,Scaffold>();
+    this.idhash = new HashMap<Long,Scaffold>();
+  }
+  /////////////////////////////////////////////////////////////////////////////
   /**	Constructor with name&#46;
   */
   public ScaffoldSet(String name)

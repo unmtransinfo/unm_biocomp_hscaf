@@ -3,12 +3,17 @@ package edu.unm.health.biocomp.hscaf;
 import java.io.*;
 import java.util.*;
 import java.util.regex.*;
+import java.sql.*;
 
 import chemaxon.formats.*;
 import chemaxon.struc.*;
+import chemaxon.sss.*;
+import chemaxon.sss.search.*;
+import chemaxon.util.MolHandler;
 import chemaxon.marvin.io.MolExportException;
  
 import edu.unm.health.biocomp.hscaf.*;
+import edu.unm.health.biocomp.db.*;
 
 /////////////////////////////////////////////////////////////////////////////
 /**	Contains static functions used in hierarchical scaffold analysis&#46;
@@ -58,17 +63,18 @@ public class hier_scaffolds_utils
     return null;
   }
   ///////////////////////////////////////////////////////////////////////////
-  /**	Returns largest fragment of fragmented molecule&#46;
+  /**	@return	largest fragment of fragmented molecule
   */
   public static Molecule largestPart(Molecule mol)
   {
-    int acount_largest=0;
-    int i_largest=0;
     Molecule[] partmols=mol.convertToFrags();
+    int i_largest=0;
     for (int i=0;i<partmols.length;++i)
     {
-      if (partmols[i].getAtomCount()>acount_largest) i_largest=i;
+      if (i!=i_largest && partmols[i].getAtomCount()>partmols[i_largest].getAtomCount())
+        i_largest=i;
     }
+    partmols[i_largest].setName(mol.getName());
     return partmols[i_largest];
   }
   ///////////////////////////////////////////////////////////////////////////
@@ -84,6 +90,7 @@ public class hier_scaffolds_utils
 	</tt>
 	This is an experimental functionality&#46;  Intended for use in combination
 	with a standard whole-molecule similarity metric&#46;
+  	@return	similarity metric
   */
   public static float commonScaffoldTanimoto(ScaffoldTree scaftreeA,ScaffoldTree scaftreeB)
   {
@@ -109,6 +116,7 @@ public class hier_scaffolds_utils
 	This is an experimental functionality&#46;  Intended for use in combination
 	with a standard whole-molecule similarity metric&#46;
 	Use this faster method if mcScaf is already calculated (with maxCommonScaffold())&#46;
+  	@return	similarity metric
   */
   public static float commonScaffoldTanimoto(ScaffoldTree scaftreeA,ScaffoldTree scaftreeB,
     Scaffold mcScaf)
@@ -125,6 +133,7 @@ public class hier_scaffolds_utils
 	all disconnected fragments after removing linkers&#46;  Used to 
 	estimate computational demands and identify high-cost
 	"pathological" molecules for special handling&#46;
+  	@return simple count of all ringsystems
   */
   public static int rawRingsystemCount(Molecule mol)
   {
@@ -148,9 +157,107 @@ public class hier_scaffolds_utils
       if (!(ringbonds.containsKey(xmol.indexOf(bond)))) nonringbonds.add(bond);
     }
     for (MolBond bond: nonringbonds) { xmol.removeBond(bond); }
-    int count=xmol.getFragCount();
-    //int count=xmol.getFragCount(MoleculeGraph.FRAG_BASIC);
+    int count=xmol.getFragCount(MoleculeGraph.FRAG_BASIC);
     return count;
   }
   ///////////////////////////////////////////////////////////////////////////
+  /**	For convenience depicting molecules with highlighted atoms
+	corresponding to a scaffold&#46;
+	@param	mol	molecule containing scaffold
+	@param	qmol	molecule representing scaffold
+  */
+  public static boolean SubMatchMap(Molecule mol,Molecule qmol)
+	throws MolExportException,SearchException,MolFormatException
+  {
+    if (mol==null || mol.getAtomCount()==0) return false;
+    if (qmol==null || qmol.getAtomCount()==0) return false;
+
+    boolean is_match=false;
+    MolSearch search=new MolSearch();
+    search.setTarget(mol);
+    // Remove exp-H's from query molecule, ignore imp-H's for permissive match.
+    qmol.implicitizeHydrogens(MolAtom.ALL_H);
+    MolSearchOptions searchOpts = new MolSearchOptions(SearchConstants.SUBSTRUCTURE); 
+    searchOpts.setImplicitHMatching(SearchConstants.IMPLICIT_H_MATCHING_DISABLED);
+    search.setSearchOptions(searchOpts);
+    search.setQuery(qmol);
+    boolean ok=false;
+    int[][] matchs=null;
+    ok=search.isMatching();
+    matchs=search.findAll(); //may throw SearchException
+
+    if (!ok || matchs==null) return false;
+
+    //Each match is an array of atom indices.
+    for (int[] match: matchs)
+    {
+      for (int ia=0; ia<match.length; ++ia)
+      {
+        if (match[ia]>=0)
+        {
+          mol.getAtom(match[ia]).setAtomMap(1);
+          is_match=true;
+        }
+        else
+          mol.getAtom(match[ia]).setAtomMap(0);
+      }
+    }
+    return is_match;
+  }
+  ///////////////////////////////////////////////////////////////////////////
+  /**	For convenience depicting molecules with highlighted atoms
+	corresponding to a scaffold&#46;
+	@param	mol	molecule containing scaffold
+	@param	qmol	molecule representing scaffold
+  */
+  public static String SubMatchMapSmiles(Molecule mol,Molecule qmol)
+	throws MolExportException,SearchException,MolFormatException,IOException
+  {
+    if (mol==null || qmol==null) return "";
+    if (mol.getAtomCount()==0) return "";
+
+    boolean is_match=SubMatchMap(mol,qmol);
+    String smifmt="smiles:u-H-a";
+    String smi=MolExporter.exportToFormat(mol,smifmt);
+    return smi;
+  }
+  ///////////////////////////////////////////////////////////////////////////
+  /**	For convenience depicting molecules with highlighted atoms
+	corresponding to a scaffold&#46;
+	@param	smi	smiles containing scaffold
+	@param	qsmi	smiles representing scaffold
+  */
+  public static String SubMatchMapSmiles(String smi,String qsmi)
+	throws MolExportException,SearchException,MolFormatException,IOException
+  {
+    Molecule mol=MolImporter.importMol(smi,"smiles:");
+    Molecule qmol=MolImporter.importMol(qsmi,"smiles:");
+    return SubMatchMapSmiles(mol,qmol);
+  }
+  /////////////////////////////////////////////////////////////////////////////
+  /**   Minimal sanity check whether DB exists ("scaffold" and "scaf2scaf"
+	tables) to support {@link ScaffoldDB} object&#46;
+  */
+  public static boolean CheckExistsDB(
+	String dbhost,
+	int dbport,
+	String dbname,
+	String dbschema,
+	String dbusr,
+	String dbpw,
+	String dbtableprefix)
+        throws SQLException
+  {
+    Connection dbcon=pg_utils.dbConnect(dbhost,dbport,dbname,dbusr,dbpw);
+    boolean ok=true;
+    if (dbcon==null) return false;
+    String sql="SELECT DISTINCT table_name FROM information_schema.tables WHERE table_schema='"+dbschema+"' AND table_name IN ('"+dbtableprefix+"scaffold','"+dbtableprefix+"scaf2scaf')";
+    ResultSet rset=pg_utils.executeSql(dbcon,sql);
+    long rowcount=0L;
+    while (rset.next()) ++rowcount;
+    rset.getStatement().close();
+    dbcon.close();
+    if (rowcount==2) return true;
+    else return false;
+  }
 }

@@ -17,15 +17,12 @@ import com.sleepycat.je.DatabaseException;
 /**	Contains internal static functions used in hierarchical scaffold analysis&#46; 
 	Not normally recommended for use by applications&#46;
 	<br />
-	This file contains some experimental code in development not
-	yet utilized, eventually to improve efficiency and reduce 
-	reliance on smarts patterns&#46;
-	<br />
 	@see edu.unm.health.biocomp.hscaf.Linker
 	@see edu.unm.health.biocomp.hscaf.ScaffoldTree
 	@see edu.unm.health.biocomp.hscaf.Scaffold
 	@see edu.unm.health.biocomp.hscaf.Linker
 	@see edu.unm.health.biocomp.hscaf.Sidechain
+	@see edu.unm.health.biocomp.hscaf.ScaffoldStore
 	@author Jeremy J Yang
 */
 public class hscaf_utils
@@ -308,8 +305,9 @@ public class hscaf_utils
     for (Molecule partmol: partmols)
     {
       String usmi_this=null;
-      try { usmi_this=partmol.exportToFormat(smifmt); }
+      try { usmi_this=MolExporter.exportToFormat(partmol,smifmt); }
       catch (MolExportException e) { usmi_this=""; }
+      catch (IOException e) { usmi_this=""; }
       if (usmi_this.equals(usmi)) { ++n_del; }
       else { mol.fuse(partmol,true); }
     }
@@ -365,12 +363,14 @@ public class hscaf_utils
     return n_j;
   }
   /////////////////////////////////////////////////////////////////////////////
-  /// *****************NEW AND EXPERIMENTAL***************** //////////////////
-  /////////////////////////////////////////////////////////////////////////////
-  /**	*****************NEW AND EXPERIMENTAL*****************
+  /**	*****************EXPERIMENTAL*****************
 	Called after tagJunctions, tags every atom identifying it as
 	scaffold, linker, or sidechain&#46;  Note that sidechains may be
 	joined to scaffolds or linkers&#46;
+	<br />
+	Contains experimental code in development not
+	yet utilized, eventually to improve efficiency and reduce 
+	reliance on smarts patterns&#46;
 	@param mol molecule to be tagged
 	@param jbonds junction bond list from tagJunctions()
   */
@@ -429,6 +429,9 @@ public class hscaf_utils
   /**	From specified atom, depth first graph search terminating
 	at junction bonds and tag all atoms&#46;  Also  terminate at
 	atoms already tagged&#46;
+	<br />
+	Contains experimental code in development not
+	yet utilized&#46;
   */
   private static int tagRole(MolAtom atom,String tag)
   {
@@ -446,7 +449,12 @@ public class hscaf_utils
     }
     return n_tag;
   }
-  /////////////////////////////////////////////////////////////////////////////
-  /// ^^^^^^^^^^^^^^^^^NEW AND EXPERIMENTAL^^^^^^^^^^^^^^^^^^^^^ //////////////
-  /////////////////////////////////////////////////////////////////////////////
+
+  public static String cansmi(String smi,boolean stereo)
+    throws IOException,MolFormatException
+  {
+    Molecule mol=MolImporter.importMol(smi,"smiles:");
+    String cansmi=MolExporter.exportToFormat(mol,(stereo?Scaffold.CANSMIFMT_STEREO:Scaffold.CANSMIFMT));
+    return cansmi;
+  }
 }

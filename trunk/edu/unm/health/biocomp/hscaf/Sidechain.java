@@ -32,12 +32,12 @@ public class Sidechain extends Molecule
 	and junction pseudo atoms remain at each junction bond&#46;
   */
   public Sidechain(Molecule mol)
-    throws MolFormatException,MolExportException,SearchException
+    throws MolFormatException,MolExportException,SearchException,IOException
   {
     mol.clonecopy(this);
     hscaf_utils.replaceJPseudoatomsWithJHydrogens(this);
-    this.cansmi=this.exportToFormat(cansmifmt);
-    this.smi=this.exportToFormat(smifmt);
+    this.cansmi=MolExporter.exportToFormat(this,cansmifmt);
+    this.smi=MolExporter.exportToFormat(this,smifmt);
     this.id=0;
   }
   /////////////////////////////////////////////////////////////////////////////
@@ -66,11 +66,11 @@ public class Sidechain extends Molecule
 	"*CCC |$p_J;;;|"&#46;
   */
   public String getJsmi()
-    throws MolExportException
+    throws MolExportException,IOException
   {
     Molecule chainmol=this.cloneMolecule();
     hscaf_utils.replaceJHydrogensWithJPseudoatoms(chainmol);
-    return chainmol.exportToFormat(cxsmifmt);
+    return MolExporter.exportToFormat(chainmol,cxsmifmt);
   }
   ///////////////////////////////////////////////////////////////////////////
 }
