@@ -10,16 +10,27 @@ The two applications are:
 
 hier_scaffolds application command line help
 {{{
- hier_scaffolds - HierS scaffolds analyzer
+hier_scaffolds - HierS scaffolds analyzer
 
- From the University of New Mexico Division of Biocomputing
- (http://biocomp.health.unm.edu/).
- 
- usage: hier_scaffolds [options]
+From the University of New Mexico Translational Informatics Division
+(http://medicine.unm.edu/informatics/).
+
+usage: hier_scaffolds [options]
+
   required:
-    -i IFILE
+    -i IFILE .................. input file of molecules
     -o OFILE .................. one (possibly) disconnected mol of parts per input mol
+  or
+    -bdb_dump OUTSCAFS ........ dump existing BerkeleyDB at BDBDIR
+  or
+    -rdb_dump OUTSCAFS ........ dump existing RDB
+
   options:
+
+  Algorithm:
+    -keep_nitro_attachments ... atoms single bonded to ring N remain in scaffold
+    -stereo ................... stereo scaffolds (default non-stereo)
+  I/O:
     -out_scaf OUTSCAFS ........ unique scafs numbered sequentially (new + db)
     -inc_mol .................. include mols in output (-o)
     -inc_scaf ................. include scaffolds in output (-o)
@@ -28,22 +39,37 @@ hier_scaffolds application command line help
     -scaflist_title  .......... scaf/link/chain list written to title
     -scaflist_append2title .... scaf/link/chain list appended to title
     -scaflist_sdtag SDTAG ..... scaf list written to SD dataitem
-    -maxatoms MAX ............. max atom count of input mol [default=100]
-    -maxrings MAX ............. max ring count of input mol [no default]
+    -append2ofile ............. output mols appended to -o OFILE (resume mode)
+  BerkeleyDB:
+    -bdb ...................... use BerkeleyDB for storage and performance
+    -bdb_dir BDBDIR ........... scratch dir for BerkeleyDB files [/tmp/hscaf]
+    -bdb_keep ................. keep BerkeleyDB files after job completion
+    -bdb_predelete ............ initially delete BerkeleyDB at BDBDIR (if existing)
+    -bdb_resume ............... resume job using existing BerkeleyDB
+  RDB:
+    -rdb ...................... use RDB for storage and performance
+    -rdb_keep ................. keep RDB tables after job completion
+    -rdb_predelete ............ initially delete RDB (if existing)
+    -rdb_resume ............... resume job using existing RDB
+    -rdb_host DBHOST .......... RDB host [localhost]
+    -rdb_port DBPORT .......... RDB port [5432]
+    -rdb_name DBNAME .......... RDB db name
+    -rdb_schema DBSCHEMA ...... RDB db schema [public]
+    -rdb_user DBUSER .......... RDB db user [$USER]
+    -rdb_pw DBPW .............. RDB db password
+    -rdb_tableprefix PREFIX ... RDB db table prefix
+  Misc:
+    -maxatoms MAX ............. max atom count of input mol [100]
+    -maxrings MAX ............. max ring count of input mol [10]
     -show_js .................. show junctions (as pseudoatoms) -- for debugging, visualizing
-    -keep_nitro_attachments ... atoms single bonded to ring N remain in scaffold
-    -stereo ................... stereo scaffolds (default non-stereo)
-    -dbdir DBDIR .............. scratch dir for db files [default=/tmp/hscaf]
-    -keepdb ................... keep scratch db files
-    -destroyexistingdb ........ initially destroy existing db at DBDIR
-    -nodb ..................... do not use BerkeleyDB for storage and performance
-    -resume ................... resume job using kept scratch db files
     -nmax NMAX ................ quit after NMAX molecules
     -nskip NSKIP .............. skip NSKIP molecules
     -v ........................ verbose
     -vv ....................... very verbose
     -vvv or -debug ............ very very verbose (slows process)
     -h ........................ this help
+
+
 }}}
 
 hier_scaffolds_common application command line help
@@ -71,7 +97,7 @@ hier_scaffolds_common application command line help
 
 == Example commands ==
 
-To run the applications, download unm_biocomp_hscaf.jar and assure that JChem (v5.5+) is installed.  The jar looks for jchem.jar in either /usr/local/!ChemAxon/JChem/lib/ or /home/app/!ChemAxon/JChem/lib/ but it can be installed elsewhere if specified explicitly.  The jar's default main class is edu.unm.health.biocomp.hier_scaffolds.
+To run the applications, download unm_biocomp_hscaf.jar and assure that JChem (v5.8.3 recommended) is installed.  The jar looks for jchem.jar in either /usr/local/!ChemAxon/JChem/lib/ or /home/app/!ChemAxon/JChem/lib/ but it can be installed elsewhere if specified explicitly.  The jar's default main class is edu.unm.health.biocomp.hier_scaffolds.
 
 Analyze input file molecules for scaffolds:
 {{{
@@ -108,7 +134,7 @@ build.xml:
 
   <description>
 	HScaf library.
-	Jeremy Yang, UNM Division of Biocomputing
+	Jeremy Yang, UNM Translational Informatics Division
   </description>
 
   <property environment="env" />
@@ -118,14 +144,10 @@ build.xml:
 
   <target name="libhscaf" >
     <javac
-  srcdir="${basedir}/edu/unm/health/biocomp/hscaf"
-  classpath="${basedir};${basedir}/edu/unm/health/biocomp/hscaf;${libjchem};${libberkeleydb}"
-     debug="true"
-     includes="*.java" >
-      <compilerarg value="-nowarn"/>
-      <compilerarg value="-Xlint:deprecation" />
-      <compilerarg value="-Xlint:-unchecked" />
-    </javac>
+  srcdir="${basedir}/edu/unm/health/biocomp/hscaf" includes="*.java"
+ classpath="${basedir};${basedir}/edu/unm/health/biocomp/hscaf;${libjchem};${libberkeleydb}"
+    / >
+
     <jar destfile="${libhscaf}" >
       <fileset dir="${basedir}"
         includes="edu/unm/health/biocomp/hscaf/*.class,edu/unm/health/biocomp/hscaf/*.java" />
@@ -135,7 +157,7 @@ build.xml:
         <attribute name="Author" value="Jeremy Yang" />
         <attribute name="Builder" value="${user.name}" />
         <attribute name="Main-Class" value="edu.unm.health.biocomp.hscaf.hier_scaffolds" />
-        <attribute name="Class-Path" value="${env.JCHEMHOME}/lib/jchem.jar" />
+        <attribute name="Class-Path"  value="${env.JCHEMHOME}/lib/jchem.jar" />
       </manifest>
     </jar>
   </target>
