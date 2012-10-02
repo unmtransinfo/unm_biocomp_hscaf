@@ -9,10 +9,11 @@ import chemaxon.sss.search.*;
 import chemaxon.struc.*;
 import chemaxon.marvin.io.MolExportException;
 
-import edu.unm.health.biocomp.hscaf.ScaffoldTree;
- 
 /**	HierS hierarchical scaffolds application for max common scaffold search&#46; 
 	Run program with no args for command-line help&#46;
+	Query input file is one molecule&#46;  Query is compared with each molecule from dataset input file,
+	and common scaffolds are written to output&#46;  Also the scaffold-based Tanimoto similarity
+	value is computed&#46;
 	<br />
 	@author Jeremy J Yang
 	@see edu.unm.health.biocomp.hscaf.ScaffoldTree
@@ -38,7 +39,6 @@ public class hier_scaffolds_common
       +"    -db IFILE ................. db molecule[s]\n"
       +"    -o OFILE .................. common scaffold[s] ordered by size\n"
       +"  options:\n"
-      +"    -out_scaf OUTSCAFS ........ unique scafs numbered sequentially\n"
       +"    -maxmol MAX ............... max size/atoms of input mol [default=100]\n"
       +"    -show_js .................. show junction points (as pseudoatoms) -- for debugging, visualizing\n"
       +"    -keep_nitro_attachments ... atoms single bonded to ring N remain in scaffold\n"
@@ -52,7 +52,6 @@ public class hier_scaffolds_common
   private static String ifileQ=null;
   private static String ifileN=null;
   private static String ofile=null;
-  private static String ofile_scaf=null;
   private static int maxmol=100;
   private static Boolean show_js=false;
   private static Boolean keep_nitro_attachments=false;
@@ -67,7 +66,6 @@ public class hier_scaffolds_common
       if (args[i].equals("-q")) ifileQ=args[++i];
       else if (args[i].equals("-db")) ifileN=args[++i];
       else if (args[i].equals("-o")) ofile=args[++i];
-      else if (args[i].equals("-out_scaf")) ofile_scaf=args[++i];
       else if (args[i].equals("-show_js")) show_js=true;
       else if (args[i].equals("-keep_nitro_attachments")) keep_nitro_attachments=true;
       else if (args[i].equals("-stereo")) stereo=true;
@@ -98,13 +96,6 @@ public class hier_scaffolds_common
       if (ofmt.equals("smiles")) ofmt="smiles:+n-a"; //Kekule for compatibility
       molWriter=new MolExporter(new FileOutputStream(ofile),ofmt);
     }
-    MolExporter molWriter_scaf=null;
-    if (ofile_scaf!=null)
-    {
-      String ofmt=MFileFormatUtil.getMostLikelyMolFormat(ofile_scaf);
-      if (ofmt.equals("smiles")) ofmt="smiles:+n-a"; //Kekule for compatibility
-      molWriter_scaf=new MolExporter(new FileOutputStream(ofile_scaf),ofmt);
-    }
 
     if (verbose>0)
       System.err.println("JChem version: "+chemaxon.jchem.version.VersionInfo.JCHEM_VERSION);
@@ -123,7 +114,7 @@ public class hier_scaffolds_common
       System.exit(1);
     }
     String molnameQ=molQ.getName();
-    if (molQ.getFragCount()>1)
+    if (molQ.getFragCount(MoleculeGraph.FRAG_BASIC)>1)
     {
       System.err.println("Warning: multi-frag query mol; analyzing largest frag only: "+molnameQ);
       molQ=hier_scaffolds_utils.largestPart(molQ);
@@ -163,8 +154,9 @@ public class hier_scaffolds_common
       if (verbose>0)
       {
         System.err.println(""+n_mol+". "+molname);
-        try { System.err.println("\t"+mol.exportToFormat(smifmt)); }
+        try { System.err.println("\t"+MolExporter.exportToFormat(mol,smifmt)); }
         catch (MolExportException e) { System.err.println(e.getMessage()); }
+        catch (IOException e) { System.err.println(e.getMessage()); }
       }
 
       if (mol.getAtomCount()>maxmol)
@@ -173,7 +165,7 @@ public class hier_scaffolds_common
         ++n_mol_toobig;
         ok=false;
       }
-      if (mol.getFragCount()>1)
+      if (mol.getFragCount(MoleculeGraph.FRAG_BASIC)>1)
       {
         System.err.println("Warning: multi-frag mol; analyzing largest frag only: ["+n_mol+"] "+molname);
         ++n_mol_frag;
@@ -204,7 +196,6 @@ public class hier_scaffolds_common
         System.err.println("\tn_chain="+scaftree.getSidechainCount());
       }
       n_total_scaf+=scaftree.getScaffoldCount();
-
 
       Scaffold mcscaf = hier_scaffolds_utils.maxCommonScaffold(scaftreeQ,scaftree);
       float sim = hier_scaffolds_utils.commonScaffoldTanimoto(scaftreeQ,scaftree,mcscaf);

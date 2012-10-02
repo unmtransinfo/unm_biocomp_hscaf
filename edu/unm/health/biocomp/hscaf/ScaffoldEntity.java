@@ -7,6 +7,10 @@ import static com.sleepycat.persist.model.Relationship.*;
 
 /**	Scaffold entity used for storage in BerkeleyDB-based ScaffoldStore&#46;
         <br />
+	Developer note: Auto-sequencing did not work correctly for cases where a database
+	was re-opened, which resulted in skipping ahead (to nearest largest multiple of 100)&#46;
+	So scaffold IDs are manually assigned 1 + count()&#46;
+        <br />
 	@see ScaffoldStore
 	@author Jeremy J Yang
 */
@@ -14,10 +18,7 @@ import static com.sleepycat.persist.model.Relationship.*;
 public class ScaffoldEntity
 {
   //@PrimaryKey(sequence="ID")  //auto, 1+	... not working correctly on re-opened database, skips ahead.
-  //
-  // Auto-sequencing did not work correctly for cases where a database
-  // was re-opened, which resulted in skipping ahead (to nearest largest multiple of 100).
-  // So scaffold IDs are manually assigned 1 + count().
+
   @PrimaryKey	//must assign manually as next available count+1, after [1,2,...count]
   private long id;
 

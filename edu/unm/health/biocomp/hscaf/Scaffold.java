@@ -31,8 +31,14 @@ import chemaxon.marvin.io.MolExportException;
 */
 public class Scaffold extends Molecule implements Comparable<Object>
 {
-  /** JChem format used for getCansmi() , for canonical scaffold smiles */
-  public static String CANSMIFMT="cxsmiles:u-L-l-e-d-D-p-R-f-w-H+a_gen";
+  /** JChem format used for getCansmi() , for canonical scaffold smiles&#46;
+      E&#46;g&#46; cansmi=MolExporter.exportToFormat(mol,Scaffold.CANSMIFMT)
+  */
+  public static final String CANSMIFMT="cxsmiles:u-L-l-e-d-D-p-R-f-w-H+a_gen+0";
+  /** JChem format used for getCansmi() , for canonical scaffold smiles&#46;
+      E&#46;g&#46; cansmi=MolExporter.exportToFormat(mol,Scaffold.CANSMIFMT_STEREO)
+  */
+  public static final String CANSMIFMT_STEREO="cxsmiles:u-L-l-e-d-D-p-R-f-w-H+a_gen";
   /** JChem format used for getSmi() */
   private static String smifmt="cxsmiles:u-L-l-e-d-D-p-R-f-w-a";
   /** JChem format used for getJsmi() */
@@ -63,7 +69,6 @@ public class Scaffold extends Molecule implements Comparable<Object>
   {
     if (!stereo)
     {
-      this.CANSMIFMT+="+0"; //non-stereo
       this.smifmt+="+0"; //non-stereo
       this.cxsmifmt+="+0"; //non-stereo
     }
@@ -209,8 +214,9 @@ public class Scaffold extends Molecule implements Comparable<Object>
   {
     if (this.cansmi==null)
     {
-      try { this.cansmi=this.exportToFormat(this.CANSMIFMT); }
+      try { this.cansmi=MolExporter.exportToFormat(this,(this.stereo?this.CANSMIFMT_STEREO:this.CANSMIFMT)); }
       catch (MolExportException e) { this.cansmi=""; }
+      catch (IOException e) { this.cansmi=""; }
     }
     return this.cansmi;
   }
@@ -225,8 +231,9 @@ public class Scaffold extends Molecule implements Comparable<Object>
     this.decompress();
     if (this.smi==null)
     {
-      try { this.smi=this.exportToFormat(this.smifmt); }
+      try { this.smi=MolExporter.exportToFormat(this,this.smifmt); }
       catch (MolExportException e) { this.smi=""; }
+      catch (IOException e) { this.smi=""; }
     }
     return this.smi;
   }
@@ -241,8 +248,9 @@ public class Scaffold extends Molecule implements Comparable<Object>
     Molecule scafmol=this.cloneMolecule();
     hscaf_utils.replaceJHydrogensWithJPseudoatoms(scafmol);
     String jsmi=null;
-    try { jsmi=scafmol.exportToFormat(cxsmifmt); }
+    try { jsmi=MolExporter.exportToFormat(scafmol,cxsmifmt); }
     catch (MolExportException e) { jsmi=""; }
+    catch (IOException e) { jsmi=""; }
     return jsmi;
   }
   ///////////////////////////////////////////////////////////////////////////

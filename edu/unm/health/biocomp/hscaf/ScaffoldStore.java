@@ -1,6 +1,6 @@
 package edu.unm.health.biocomp.hscaf;
 
-import java.io.File;
+import java.io.*;
 import java.util.*;
 import java.math.*;
 import java.lang.InterruptedException;
@@ -25,6 +25,8 @@ import chemaxon.formats.MolFormatException;
 	<br />
 	Note that ScaffoldSet is an alternative for in-memory storage,
 	for if BerkeleyDB is unavailable or for small datasets&#46;
+	<br />
+	For largest jobs use ScaffoldDB (PostgreSQL)&#46;
 	@author Jeremy J Yang
  */
 public class ScaffoldStore
@@ -35,7 +37,6 @@ public class ScaffoldStore
   private EntityStore scafEntityStore;
   private Boolean stereo;
   private Boolean keep_nitro_attachments;
-
   
   protected PrimaryIndex<Long, ScaffoldEntity> scaffoldById;
   protected SecondaryIndex<String, Long, ScaffoldEntity> scaffoldByCanSmi;
@@ -47,7 +48,6 @@ public class ScaffoldStore
   public ScaffoldStore(File location,Boolean stereo,Boolean keep_nitro_attachments)
 	throws DatabaseException
   {
-    assert (!(location.exists() && location.isFile()));
     this.envConf.setAllowCreate(true);
     this.envConf.setTransactional(true);
     this.env = new Environment(location,envConf);
@@ -79,24 +79,24 @@ public class ScaffoldStore
   {
     String txt="";
     if (verbose==0) return "";
+
+    txt+="config:\n";
+    txt+=("\tstereo: "+this.isStereo()+"\n");
+    txt+=("\tkeep_nitro_attachments: "+this.isKeep_nitro_attachments()+"\n");
+    txt+=("count() = "+this.count()+"\n");
     Long id_max=0L;
     Transaction txn = this.env.beginTransaction(null, null);
     EntityCursor<ScaffoldEntity> curr = this.scaffoldById.entities(txn, CursorConfig.DEFAULT);
     for (ScaffoldEntity scaf=curr.first(); scaf!=null; scaf=curr.next())
-    {
       id_max=Math.max(id_max,scaf.getId());
-    }
     curr.close();
     txn.commitNoSync();
     txt+=("id_max = "+id_max+"\n");
-    txt+=("count() = "+this.count()+"\n");
     if (verbose>1)
     {
       txt+="databases:\n";
       for (String dbName : this.env.getDatabaseNames())
-      {
         txt+=("\t"+dbName+"\n");
-      }
     }
     if (verbose>3)
       txt+=("envstats = "+this.env.getStats(null).toString()+"\n");
@@ -199,24 +199,29 @@ public class ScaffoldStore
     }
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Merges a complete [sub] ScaffoldTree defined by the Scaffold
-	argument with the ScaffoldStore&#46;
+  /**	Merges a fully populated ScaffoldTree defined by the Scaffold
+	argument with the ScaffoldStore&#46;  
+
 	New scaffolds are assigned new IDs&#46;  Existing scaffolds are
 	recognized as such&#46;  Initially called with new root scaffold,
 	then recursively&#46;  For each call, process all immediate child
 	scaffolds, then assign ChildIds and ParentId to ScaffoldEntity&#46;
-	
+
+	Note that a new unknown parent may have known and/or new child scaffolds&#46;	
+	Hence this recursive method must handle the known-scaffold case&#46;
   */
   public int mergeScaffoldTree(Scaffold scaf)
     throws DatabaseException
   {
     int n_new=0;
     String cansmi=scaf.getCansmi();
+    //System.err.println("DEBUG: (mergeScaffoldTree) scafsmi="+cansmi);
     long id=0L;
     // First either find existing or create new ScaffoldEntity.
     if (this.scaffoldByCanSmi.contains(cansmi))
     {
       id=this.scaffoldByCanSmi.get(cansmi).getId();
+      //System.err.println("DEBUG: (mergeScaffoldTree) scaf found; id="+id);
     }
     else
     {
@@ -261,6 +266,9 @@ public class ScaffoldStore
   /**	Populates an incomplete ScaffoldTree from known root Scaffold&#46;
 	Note that since root scaffold is known, all child scaffolds must also
 	be known&#46;
+
+	For known scaffold, obtain ID from store, and find child scaffolds
+	in store to populate ScaffoldTree&#46;
   */
   public int populateScaffoldTree(Scaffold scaf)
     throws DatabaseException
@@ -269,7 +277,7 @@ public class ScaffoldStore
     //System.err.println("DEBUG: (populateScaffoldTree); scaf.getID() = "+scaf.getID());
     if (!this.scaffoldById.contains(scaf.getID()))
     {
-      System.err.println("DEBUG: (populateScaffoldTree) aaack! ID not found...");
+      //System.err.println("DEBUG: (populateScaffoldTree) aaack! ID not found...");
       return 0; //Should not happen.
     }
     ScaffoldEntity scent = this.scaffoldById.get(scaf.getID());
@@ -278,7 +286,7 @@ public class ScaffoldStore
     for (Iterator<Long> itr=chids.iterator(); itr.hasNext(); )
     {
       long chid=itr.next();
-      if (chid==0) System.err.println("DEBUG: (populateScaffoldTree) ERROR; chid = "+chid);
+      //if (chid==0) System.err.println("DEBUG: (populateScaffoldTree) ERROR; chid = "+chid);
       ScaffoldEntity cscent = this.scaffoldById.get(chid);
       String cansmi = cscent.getCanSmi();
       //System.err.println("DEBUG: (populateScaffoldTree) chid = "+chid+" ; smi = "+cansmi);
@@ -303,8 +311,8 @@ public class ScaffoldStore
   }
   /////////////////////////////////////////////////////////////////////////////
   /**	Generates string representing the hierarchical scaffold sub tree
-        rooted by this scaffold&#46;
-	Same format as Scaffold.subTreeAsString()&#46;
+        rooted by this scaffold&#46; Same format as Scaffold.subTreeAsString()&#46;
+	e&#46;g&#46; "1:(2,3)" or "1:(2:(3,4,5),6:(4,7))"
   */
   public String getScaffoldString(ScaffoldEntity scent)
 	throws DatabaseException
@@ -345,21 +353,34 @@ public class ScaffoldStore
     return this.keep_nitro_attachments;
   }
   /////////////////////////////////////////////////////////////////////////////
-  public void DEBUG_dump()
+  /**	Dump all scaffolds in this ScaffoldStore to file; format is 
+	legal smiles file and normal hier_scaffolds output:
+	(SMILES ID SCAFTREE)&#46;  Returns number of scaffolds
+	written&#46;
+  */
+  public long dumpToFile(File fout,int verbose)
+        throws IOException,DatabaseException
   {
+    long nscaf=0;
+    if (verbose>0)
+    {
+      System.err.println("Dumping scaffold store to file.");
+      System.err.println(this.info(verbose));
+    }
+    PrintWriter fout_writer=new PrintWriter(new BufferedWriter(new FileWriter(fout,false))); //overwrite
+
     for (long scaf_id=1L;true;++scaf_id)
     {
       ScaffoldEntity scent=null;
       try {
         scent=this.scaffoldById.get(scaf_id);
       }
-      catch (Exception e) { break; }
+      catch (Exception e) { break; } //Must be EOF? 
       if (scent==null) break;
-      System.err.println("ScaffoldEntity ID="+scaf_id+":");
-      System.err.println("\tCanSmi: "+scent.getCanSmi());
-      System.err.println("\tChildIds: "+scent.getChildIds());
-      System.err.println("\tParentId: "+scent.getParentId());
+      fout_writer.printf("%s %d %s\n",scent.getCanSmi(),scaf_id,getScaffoldString(scent));
+      ++nscaf;
     }
-    return;
+    fout_writer.close();
+    return nscaf;
   }
 }

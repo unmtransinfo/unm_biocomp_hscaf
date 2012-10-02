@@ -3,40 +3,49 @@ package edu.unm.health.biocomp.hscaf;
 import java.io.*;
 import java.util.*;
 import java.util.regex.*;
+import java.sql.*;
+
 import com.sleepycat.je.DatabaseException;
+
 import chemaxon.formats.*;
 import chemaxon.sss.search.*;
 import chemaxon.struc.*;
 import chemaxon.util.MolHandler;
 import chemaxon.marvin.io.MolExportException;
  
-/////////////////////////////////////////////////////////////////////////////
-/**	Comprised of a set of hierarchical scaffolds each a Scaffold object&#46;
+
+/**	Comprised of a set of hierarchical scaffolds each a {@link Scaffold} object&#46;
 	Each input molecule has an associated ScaffoldTree, a hierarchical
-	tree of Scaffolds, the largest of which is the root scaffold
+	tree of {@link Scaffold}s, the largest of which is the root scaffold
 	(and the Bemis-Murko framework)&#46;  The ScaffoldTree object
-	does not contain the Scaffold objects, which may be contained
-	in a ScaffoldSet or re-constructed from ScaffoldStore
-	ScaffoldEntitys&#46;
-	The ScaffoldTree object also contains the Linkers and Sidechains
+	does not contain the {@link Scaffold} objects, which may be contained
+	in a {@link ScaffoldSet} or re-constructed from {@link ScaffoldStore}
+	{@link ScaffoldEntity}s&#46;
+	The ScaffoldTree object also contains the {@link Linker}s and {@link Sidechain}s
 	for the input molecule, and a copy of the input molecule&#46;
 	<br />
 	[Implementation notes] Here are the steps in perceiving the scaffolds
 	of an input molecule:
 	<ol>
 	<li> ScaffoldTree constructor called by application with input molecule
-	as parameter, and either a ScaffoldSet or ScaffoldStore instance, which
+	as parameter, and either a {@link ScaffoldSet}, {@link ScaffoldStore}
+	or {@link ScaffoldDB} instance, which
 	stores known scaffolds, for output to unique list, and to avoid
 	re-analysis of previously encountered scaffolds, and thereby
 	enhance performance&#46;
-	<li> The application may elect to use ScaffoldStore, which uses
-	BerkeleyDB, for large datasets&#46;  ScaffoldSet in-memory storage is
-	faster but may exhaust available memory for large datasets&#46;
+	<li> The application may elect to use {@link ScaffoldStore}, which uses
+	BerkeleyDB, for large-ish datasets&#46;  {@link ScaffoldSet} in-memory storage is
+	faster for small datasetsbut may exhaust available memory for large datasets&#46;
+	For large (&gt; 100k compounds) jobs, or for directly populating a
+	database, {@link ScaffoldDB} can be used, but requires an available
+	database server&#46;
 	<li> For each input molecule, a complete ScaffoldTree is built&#46;
-	When ScaffoldSet is used, the ScaffoldTree references Scaffold instances 
-	which are contained in the ScaffoldSet&#46;  When ScaffoldStore is used,
-	all Scaffold instances must be re-constructed from ScaffoldEntity
-	objects&#46;
+	When {@link ScaffoldSet} is used, the ScaffoldTree references {@link Scaffold} instances 
+	which are contained in the {@link ScaffoldSet}&#46;
+	When {@link ScaffoldStore} is used, all {@link Scaffold} instances must be
+	re-constructed from {@link ScaffoldEntity} objects&#46;
+	When {@link ScaffoldDB} is used, all {@link Scaffold} instances must be
+	re-constructed from {@link ScaffoldRecord} objects&#46;
 	<li> The perception of scaffolds from a molecule is accomplished by:
 	<ul>
 	<li> hscaf_utils.tagJunctions() - tags junction bonds
@@ -45,6 +54,7 @@ import chemaxon.marvin.io.MolExportException;
 	no more junctions&#46; 
 	</ul>
 	</ol>
+	<br/>
 	@see edu.unm.health.biocomp.hscaf.Linker
 	@see edu.unm.health.biocomp.hscaf.Scaffold
 	@see edu.unm.health.biocomp.hscaf.Linker
@@ -52,6 +62,8 @@ import chemaxon.marvin.io.MolExportException;
 	@see edu.unm.health.biocomp.hscaf.hscaf_utils
 	@see edu.unm.health.biocomp.hscaf.ScaffoldStore
 	@see edu.unm.health.biocomp.hscaf.ScaffoldEntity
+	@see edu.unm.health.biocomp.hscaf.ScaffoldDB
+	@see edu.unm.health.biocomp.hscaf.ScaffoldRecord
 	@author Jeremy J Yang
 */
 public class ScaffoldTree
@@ -71,19 +83,21 @@ public class ScaffoldTree
   /**	Create ScaffoldTree by analyzing input molecule&#46;  All scaffolds will
 	be found and associated with the root scaffold, a&#46;k&#46;a&#46; the 
 	Bemis-Murko framework&#46;  If input molecule is multi-fragment,
-	throw exception&#46;   If scafstore is provided, it will be used as a lookup
+	throw exception&#46;   Either (1) {@link ScaffoldSet}, (2) {@link ScaffoldStore},
+	or (3) {@link ScaffoldDB} used as a lookup
 	to avoid re-analysis of previously analyzed scaffolds&#46;
 	@param mol input molecule
 	@param keep_nitro_attachments true for N-attachments scaf definition
 	@param stereo stereo scaffolds (default non-stereo)
-	@param scafstore Berkeley DB for lookup table
+	@param scafset in-memory lookup table
+	@param scafstore BerkeleyDB for lookup table
+	@param scafdb RDB for lookup table
   */
   public ScaffoldTree(Molecule mol,boolean stereo,boolean keep_nitro_attachments,
-        ScaffoldSet scafset,ScaffoldStore scafstore)
-    throws SearchException,MolFormatException,MolExportException,ScaffoldException
+        ScaffoldSet scafset,ScaffoldStore scafstore,ScaffoldDB scafdb)
+    throws SearchException,MolFormatException,MolExportException,ScaffoldException,IOException
   {
-    //System.err.println("DEBUG: (ScaffoldTree) ...");
-    if (mol.getFragCount()>1)
+    if (mol.getFragCount(MoleculeGraph.FRAG_BASIC)>1)
       throw new ScaffoldException("Cannot analyze multi-fragment molecule.");
     this.inmol=mol.cloneMolecule();
     this.mol=mol.cloneMolecule();
@@ -98,25 +112,34 @@ public class ScaffoldTree
     this.linkers = new ArrayList<Linker>(); //default empty
     this.sidechains = new ArrayList<Sidechain>(); //default empty
     if (this.rootscaf==null) return;
+    boolean scaf_known=false;
     try
     {
-      if (scafstore!=null && scafstore.scaffoldByCanSmi.contains(this.rootscaf.getCansmi()))
-      {
-	ScaffoldEntity scent = scafstore.scaffoldByCanSmi.get(this.rootscaf.getCansmi());
-        long id = scent.getId();
-        this.rootscaf.setID(id);
-      }
-      else if  (scafset!=null && scafset.containsScaffold(this.rootscaf)) // Scaf present in scafset?
+      if  (scafset!=null && scafset.containsScaffold(this.rootscaf)) // Scaf present in scafset?
       {
         // Replace root scaffold with stored instance.
         this.rootscaf=scafset.getScaffoldByID(scafset.getScaffoldID(this.rootscaf));
+        scaf_known=true;
       }
-      else
+      else if (scafstore!=null && scafstore.scaffoldByCanSmi.contains(this.rootscaf.getCansmi()))
+      {
+	ScaffoldEntity scent=scafstore.scaffoldByCanSmi.get(this.rootscaf.getCansmi());
+        long id=scent.getId();
+        this.rootscaf.setID(id);
+        scaf_known=true;
+      }
+      else if (scafdb!=null && scafdb.containsScaffoldByCansmi(this.rootscaf.getCansmi()))
+      {
+	ScaffoldRecord scafrec=scafdb.getScaffoldByCansmi(this.rootscaf.getCansmi());
+        long id=scafrec.getID();
+        this.rootscaf.setID(id);
+        scaf_known=true;
+      }
+      else //Does this work (set,store,db = null,null,null)?
       {
         if (this.rootscaf.isLegal())
         {
           hscaf_utils.findChildScaffolds(this.rootscaf,scafset,scafstore);
-          //System.err.println("DEBUG: (ScaffoldTree) back from findChildScaffolds  ...");
           rmJBonds(this.mol);
           this.linkers=findLinkers(this.mol);
           this.sidechains=findSidechains(this.mol);
@@ -127,36 +150,76 @@ public class ScaffoldTree
       if (this.rootscaf!=null)
       {
         if (scafset!=null) scafset.mergeScaffoldTree(this.rootscaf); // Scaf IDs assigned here.
-        if (scafstore!=null) scafstore.mergeScaffoldTree(this.rootscaf); // Scaf IDs assigned here.
+        else if (scafstore!=null)
+        {
+          if (scaf_known)
+            scafstore.populateScaffoldTree(this.rootscaf); // Scaf IDs assigned here.
+          else
+            scafstore.mergeScaffoldTree(this.rootscaf); // Scaf IDs assigned here.
+        }
+        else if (scafdb!=null)
+        {
+          if (scaf_known)
+            scafdb.populateScaffoldTree(this.rootscaf); // Scaf IDs assigned here.
+          else
+            scafdb.mergeScaffoldTree(this.rootscaf); // Scaf IDs assigned here.
+        }
       }
+    }
+    catch (SQLException e)
+    {
+      System.err.println("SQLException: "+e);
+      System.exit(1);
     }
     catch (DatabaseException e)
     {
-      System.err.println("Fatal database exception: "+e);
+      System.err.println("DatabaseException: "+e);
       System.exit(1);
     }
     //System.err.println("DEBUG: (ScaffoldTree) leaving ...");
   }
-  /**   No ScaffoldStore&#46;
+  /**   {@link ScaffoldSet} used for storage&#46;
+	@param mol input molecule
+	@param keep_nitro_attachments true for N-attachments scaf definition
+	@param stereo stereo scaffolds (default non-stereo)
+	@param scafset in-memory lookup table
   */
   public ScaffoldTree(Molecule mol,boolean keep_nitro_attachments,boolean stereo,ScaffoldSet scafset)
-    throws SearchException,MolFormatException,MolExportException,ScaffoldException
+    throws SearchException,MolFormatException,MolExportException,ScaffoldException,IOException
   {
-    this(mol,keep_nitro_attachments,stereo,scafset,null);
+    this(mol,keep_nitro_attachments,stereo,scafset,null,null);
   }
-  /**   No ScaffoldSet&#46;
+  /**   {@link ScaffoldStore} used for storage&#46;
+	@param mol input molecule
+	@param keep_nitro_attachments true for N-attachments scaf definition
+	@param stereo stereo scaffolds (default non-stereo)
+	@param scafstore Berkeley DB for lookup table
   */
   public ScaffoldTree(Molecule mol,boolean keep_nitro_attachments,boolean stereo,ScaffoldStore scafstore)
-    throws SearchException,MolFormatException,MolExportException,ScaffoldException
+    throws SearchException,MolFormatException,MolExportException,ScaffoldException,IOException
   {
-    this(mol,keep_nitro_attachments,stereo,null,scafstore);
+    this(mol,keep_nitro_attachments,stereo,null,scafstore,null);
   }
-  /**   No ScaffoldStore, no ScaffoldSet&#46;
+  /**   {@link ScaffoldDB} used for storage&#46;
+	@param mol input molecule
+	@param keep_nitro_attachments true for N-attachments scaf definition
+	@param stereo stereo scaffolds (default non-stereo)
+	@param scafdb RDB for lookup table
+  */
+  public ScaffoldTree(Molecule mol,boolean keep_nitro_attachments,boolean stereo,ScaffoldDB scafdb)
+    throws SearchException,MolFormatException,MolExportException,ScaffoldException,IOException
+  {
+    this(mol,keep_nitro_attachments,stereo,null,null,scafdb);
+  }
+  /**   No ScaffoldStore, no ScaffoldSet, no ScaffoldDB&#46;
+	@param mol input molecule
+	@param keep_nitro_attachments true for N-attachments scaf definition
+	@param stereo stereo scaffolds (default non-stereo)
   */
   public ScaffoldTree(Molecule mol,boolean keep_nitro_attachments,boolean stereo)
-    throws SearchException,MolFormatException,MolExportException,ScaffoldException
+    throws SearchException,MolFormatException,MolExportException,ScaffoldException,IOException
   {
-    this(mol,keep_nitro_attachments,stereo,null,null);
+    this(mol,keep_nitro_attachments,stereo,null,null,null);
   }
   /////////////////////////////////////////////////////////////////////////////
   /**	Returns list of all scaffolds, deduplicated&#46;  Note that although the child scaffolds
@@ -246,7 +309,7 @@ public class ScaffoldTree
   /**	SMILES representing all scaffolds as disconnected fragments&#46;
   */
   public String getSmiForScaffoldsGroupmol(boolean show_js)
-    throws MolExportException
+    throws MolExportException,IOException
   {
     Molecule groupmol = new Molecule();
     for (Scaffold cscaf: this.getScaffolds())
@@ -255,13 +318,13 @@ public class ScaffoldTree
       hscaf_utils.replaceJHydrogensWithJPseudoatoms(groupmol);
     else
       groupmol.implicitizeHydrogens(MolAtom.ALL_H);
-    return groupmol.exportToFormat(cxsmifmt);
+    return MolExporter.exportToFormat(groupmol,cxsmifmt);
   }
   /////////////////////////////////////////////////////////////////////////////
   /**	SMILES representing all linkers as disconnected fragments&#46;
   */
   public String getSmiForLinkersGroupmol(boolean show_js)
-    throws MolExportException
+    throws MolExportException,IOException
   {
     Molecule groupmol = new Molecule();
     for (Linker link: this.getLinkers())
@@ -270,13 +333,13 @@ public class ScaffoldTree
       hscaf_utils.replaceJHydrogensWithJPseudoatoms(groupmol);
     else
       groupmol.implicitizeHydrogens(MolAtom.ALL_H);
-    return groupmol.exportToFormat(cxsmifmt);
+    return MolExporter.exportToFormat(groupmol,cxsmifmt);
   }
   /////////////////////////////////////////////////////////////////////////////
   /**	SMILES representing all side-chains as disconnected fragments&#46;
   */
   public String getSmiForSidechainsGroupmol(boolean show_js)
-    throws MolExportException
+    throws MolExportException,IOException
   {
     Molecule groupmol = new Molecule();
     for (Sidechain chain: this.getSidechains())
@@ -285,7 +348,7 @@ public class ScaffoldTree
       hscaf_utils.replaceJHydrogensWithJPseudoatoms(groupmol);
     else
       groupmol.implicitizeHydrogens(MolAtom.ALL_H);
-    return groupmol.exportToFormat(cxsmifmt);
+    return MolExporter.exportToFormat(groupmol,cxsmifmt);
   }
   /////////////////////////////////////////////////////////////////////////////
   /**	Removes junction bonds in molecule previously tagged
@@ -329,7 +392,7 @@ public class ScaffoldTree
 	side-chains removed&#46;
   */
   private static ArrayList<Linker> findLinkers(Molecule mol)
-    throws SearchException,MolFormatException,MolExportException
+    throws SearchException,MolFormatException,MolExportException,IOException
   {
     ArrayList<Linker> links = new ArrayList<Linker>();
     MolSearch patScaf = new MolSearch(); //scaf pattern
@@ -365,7 +428,7 @@ public class ScaffoldTree
 	are deduplicated&#46;
   */
   private static ArrayList<Sidechain> findSidechains(Molecule mol)
-    throws SearchException,MolFormatException,MolExportException
+    throws SearchException,MolFormatException,MolExportException,IOException
   {
     ArrayList<Sidechain> chains = new ArrayList<Sidechain>();
     MolSearch patScaf = new MolSearch(); //scaf pattern

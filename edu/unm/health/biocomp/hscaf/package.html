@@ -72,6 +72,28 @@ usage: hier_scaffolds_common [options]
     -vv ....................... very verbose
     -h ........................ this help
 </PRE>
+<H3>hier_scaffolds_stats application command line help</H3>
+<PRE>
+hier_scaffolds_stats - postprocess HierS scaffolds output (from hier_scaffolds)\n"
+
+From the University of New Mexico Division of Biocomputing
+(http://biocomp.health.unm.edu/).
+
+usage: hier_scaffolds_stats [options]
+  required:
+    -i IFILE ................... input file of molecules annotated with scaf info
+    -in_scaf INSCAF ............ input file of scafs, numbered sequentially
+    -out_scaf OUTSCAF .......... same scafs; stats appended to titles
+  options:
+    -scaflist_title  ........... scaf/link/chain list is title
+    -scaflist_append2title ..... scaf/link/chain is 2nd title field
+    -scaflist_sdtag SDTAG ...... scaf list input SD dataitem
+    -report_mol_lists_ids ...... after stats, append list of mol ids (maybe fat)
+    -sort_by_frequency ......... output scaf/link/chain lists sorted
+    -v ......................... verbose
+    -vv ........................ very verbose
+    -h ......................... this help
+</PRE>
 <H3>Known bugs, issues</H3>
 <UL>
 <LI> No macrocycle discrimination.
@@ -90,6 +112,12 @@ Note that MolAtom.PSEUDO=136, but w/ JChem [#136] does not match (bug?).  See
 One reason for this approach is that the wildcard atom MolAtom.ANY (comparable to
 [#0] in Daylight, OEChem) cannot be readily matched with JChem and is, quite logically,
 predominantly a query concept.
+<LI>JChem 5.9.4 results in errors not seen using JChem 5.8.3, for example:
+<PRE>
+Query:*-*
+  Target:C(*1**1)*1**1 |$;J_p;_p;_p;J_p;_p;_p$|
+An error occured during search:java.lang.NullPointerException
+</PRE>
 </UL>
 
 <H3>References</H3>
