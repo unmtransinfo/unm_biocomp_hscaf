@@ -76,8 +76,8 @@ hier_scaffolds_common application command line help
 {{{
  hier_scaffolds_common - search for common HierS scaffolds
  
- From the University of New Mexico Division of Biocomputing
- (http://biocomp.health.unm.edu/).
+ From the University of New Mexico Translational Informatics Division
+(http://medicine.unm.edu/informatics/).
  
  usage: hier_scaffolds_common [options]
   required:
