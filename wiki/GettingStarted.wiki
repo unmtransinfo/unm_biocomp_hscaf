@@ -139,26 +139,16 @@ build.xml:
 
   <property environment="env" />
   <property name="libjchem" location="${env.JCHEMHOME}/lib/jchem.jar" />
-  <property name="libberkeleydb" location="/usr/share/java/berkeleydb.jar" />
+  <property name="libberkeleydb" location="/home/app/lib/berkeleydb.jar" />
+  <property name="libpgsql" location="/home/app/lib/postgresql-8.3-607.jdbc3.jar" />
   <property name="libhscaf" location="${basedir}/unm_biocomp_hscaf.jar" />
 
   <target name="libhscaf" >
     <javac
   srcdir="${basedir}/edu/unm/health/biocomp/hscaf" includes="*.java"
- classpath="${basedir};${basedir}/edu/unm/health/biocomp/hscaf;${libjchem};${libberkeleydb}"
-    / >
-
+ classpath="${basedir};${basedir}/edu/unm/health/biocomp/hscaf;${libjchem};${libberkeleydb};${libpgsql}" / >
     <jar destfile="${libhscaf}" >
-      <fileset dir="${basedir}"
-        includes="edu/unm/health/biocomp/hscaf/*.class,edu/unm/health/biocomp/hscaf/*.java" />
-      <fileset dir="${basedir}/doc/hscaf"
-        includes="*.html,edu/unm/health/biocomp/hscaf/*.html" />
-      <manifest>
-        <attribute name="Author" value="Jeremy Yang" />
-        <attribute name="Builder" value="${user.name}" />
-        <attribute name="Main-Class" value="edu.unm.health.biocomp.hscaf.hier_scaffolds" />
-        <attribute name="Class-Path"  value="${env.JCHEMHOME}/lib/jchem.jar" />
-      </manifest>
+      <fileset dir="${basedir}" includes="edu/unm/health/biocomp/hscaf/*.class" />
     </jar>
   </target>
 
@@ -166,11 +156,8 @@ build.xml:
     <delete>
       <fileset dir="${basedir}" includes="**/*.class"/>
       <fileset dir="${basedir}" includes="**/*.jar"/>
-      <fileset dir="${basedir}" includes="**/*_out.txt"/>
-      <fileset dir="${basedir}" includes="failures"/>
     </delete>
   </target>
-
 </project>
 
 }}}
