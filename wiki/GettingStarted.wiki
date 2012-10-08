@@ -141,14 +141,22 @@ build.xml:
   <property name="libjchem" location="${env.JCHEMHOME}/lib/jchem.jar" />
   <property name="libberkeleydb" location="/home/app/lib/berkeleydb.jar" />
   <property name="libpgsql" location="/home/app/lib/postgresql-8.3-607.jdbc3.jar" />
-  <property name="libhscaf" location="${basedir}/unm_biocomp_hscaf.jar" />
 
   <target name="libhscaf" >
     <javac
   srcdir="${basedir}/edu/unm/health/biocomp/hscaf" includes="*.java"
- classpath="${basedir};${basedir}/edu/unm/health/biocomp/hscaf;${libjchem};${libberkeleydb};${libpgsql}" / >
-    <jar destfile="${libhscaf}" >
+ classpath="${basedir};${basedir}/edu/unm/health/biocomp/hscaf;${libjchem};${libberkeleydb}" / >
+<javac
+  srcdir="${basedir}/edu/unm/health/biocomp/db" includes="*.java"
+ classpath="${basedir};${basedir}/edu/unm/health/biocomp/db;${libjchem};${libpgsql}" / >
+<javac
+  srcdir="${basedir}/edu/unm/health/biocomp/util" includes="*.java"
+ classpath="${basedir};${basedir}/edu/unm/health/biocomp/util;${libjchem}" / >
+
+    <jar destfile="${basedir}/unm_biocomp_hscaf_distro.jar" >
       <fileset dir="${basedir}" includes="edu/unm/health/biocomp/hscaf/*.class" />
+      <fileset dir="${basedir}" includes="edu/unm/health/biocomp/db/*.class" />
+      <fileset dir="${basedir}" includes="edu/unm/health/biocomp/util/*.class" />
     </jar>
   </target>
 
