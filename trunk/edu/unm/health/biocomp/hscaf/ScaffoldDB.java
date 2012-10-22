@@ -9,8 +9,6 @@ import edu.unm.health.biocomp.db.*;
 
 import chemaxon.formats.MolFormatException;
 
-/// to do: [ ]  escape smiles backslashes for sql
-
 /**	Provides persistent scaffold storage via standard RDB&#46;
 	For large jobs this avoids memory limits and improves performance by
 	storing solved scaffolds for rapid lookup and avoiding re-calculation&#46;
@@ -26,6 +24,7 @@ import chemaxon.formats.MolFormatException;
 	agnostic (support MySql, etc)&#46;
 	<br />
 	@author Jeremy J Yang
+	@see	ScaffoldRecord
  */
 public class ScaffoldDB
 {
@@ -69,14 +68,7 @@ public class ScaffoldDB
 	<code>CREATE TABLE <i>DBSCHEMA.DBTABLEPREFIX</i>scaffold (<br/>
 	&nbsp;	id INTEGER PRIMARY KEY,<br/>
 	&nbsp;	scafsmi VARCHAR(512) UNIQUE NOT NULL,<br/>
-	&nbsp;	scaftree VARCHAR(2048),<br/>
-	&nbsp;	ncpd_total INTEGER,<br/>
-	&nbsp;	ncpd_tested INTEGER,<br/>
-	&nbsp;	ncpd_active INTEGER,<br/>
-	&nbsp;	nass_tested INTEGER,<br/>
-	&nbsp;	nass_active INTEGER,<br/>
-	&nbsp;	nsam_tested INTEGER,<br/>
-	&nbsp;	nsam_active INTEGER )<br/>
+	&nbsp;	scaftree VARCHAR(2048))<br/>
 	<br />
 	CREATE TABLE <i>DBSCHEMA.DBTABLEPREFIX</i>scaf2scaf (<br/>
 	&nbsp;	parent_id INTEGER,<br/>
@@ -129,6 +121,7 @@ public class ScaffoldDB
   }
   /////////////////////////////////////////////////////////////////////////////
   /**	Creates new database at location specified&#46;
+  	Schema should be "public" unless previously created manually&#46;
   */
   private boolean createNewDB()
 	throws SQLException
@@ -136,34 +129,39 @@ public class ScaffoldDB
     boolean ok=true;
     String sql="";
 
-    //sql="CREATE SCHEMA "+this.dbschema;
-    //pg_utils.execute(this.dbcon,sql);
-    //this.dbcon.commit();
-
-    sql="CREATE TABLE "+this.dbschema+"."+this.dbtableprefix+"scaffold ("
-      +"id INTEGER PRIMARY KEY,"
-      +"scafsmi VARCHAR(512) UNIQUE NOT NULL,"
-      +"scaftree VARCHAR(2048),"
-      +"ncpd_total INTEGER,"
-      +"ncpd_tested INTEGER,"
-      +"ncpd_active INTEGER,"
-      +"nass_tested INTEGER,"
-      +"nass_active INTEGER,"
-      +"nsam_tested INTEGER,"
-      +"nsam_active INTEGER)";
-    pg_utils.execute(this.dbcon,sql);
+    sql="CREATE TABLE "+this.dbschema+"."+this.dbtableprefix+"scaffold"
+      +"(id INTEGER PRIMARY KEY,scafsmi VARCHAR(512) UNIQUE NOT NULL,scaftree VARCHAR(2048))";
+    ok&=pg_utils.execute(this.dbcon,sql);
     this.dbcon.commit();
 
-    sql="CREATE TABLE "+this.dbschema+"."+this.dbtableprefix+"scaf2scaf ("
-      +"parent_id INTEGER,"
-      +"child_id INTEGER)";
-    pg_utils.execute(this.dbcon,sql);
+    sql="CREATE TABLE "+this.dbschema+"."+this.dbtableprefix+"scaf2scaf"
+      +"(parent_id INTEGER NOT NULL,child_id INTEGER NOT NULL)";
+    ok&=pg_utils.execute(this.dbcon,sql);
     this.dbcon.commit();
 
-    sql="CREATE INDEX scaf_scafid_idx ON "+this.dbschema+"."+this.dbtableprefix+"scaffold (id)";
-    pg_utils.execute(this.dbcon,sql);
+    sql="CREATE INDEX scaffold_id_idx ON "+this.dbschema+"."+this.dbtableprefix+"scaffold (id)";
+    ok&=pg_utils.execute(this.dbcon,sql);
     this.dbcon.commit();
 
+    sql="CREATE INDEX scaf2scaf_parent_id_idx ON "+this.dbschema+"."+this.dbtableprefix+"scaf2scaf (parent_id)";
+    ok&=pg_utils.execute(this.dbcon,sql);
+    this.dbcon.commit();
+
+    return ok;
+  }
+  /////////////////////////////////////////////////////////////////////////////
+  /**	Re-index modified tables periodically for faster response&#46;
+  */
+  public boolean reindex()
+	throws SQLException
+  {
+    boolean ok=true;
+    if (this.dbcon==null) return false;
+    String sql="REINDEX TABLE "+this.dbschema+"."+this.dbtableprefix+"scaffold";
+    ok&=pg_utils.execute(this.dbcon,sql);
+
+    sql="REINDEX TABLE "+this.dbschema+"."+this.dbtableprefix+"scaf2scaf";
+    ok&=pg_utils.execute(this.dbcon,sql);
     return ok;
   }
   /////////////////////////////////////////////////////////////////////////////
@@ -220,8 +218,7 @@ public class ScaffoldDB
 	throws SQLException
   {
     ScaffoldRecord scafrec = null;
-    String sql="SELECT scafsmi FROM "+this.dbschema+"."+this.dbtableprefix+"scaffold"
-	+" WHERE id="+id;
+    String sql="SELECT scafsmi FROM "+this.dbschema+"."+this.dbtableprefix+"scaffold WHERE id="+id;
     ResultSet rset=pg_utils.executeSql(this.dbcon,sql); // Check ok?  How?
     if (!rset.next()) return null; //ERROR
 
@@ -253,7 +250,8 @@ public class ScaffoldDB
   public ScaffoldRecord getScaffoldByCansmi(String cansmi)
 	throws SQLException,MolFormatException,IOException
   {
-    String sql="SELECT id FROM "+this.dbschema+"."+this.dbtableprefix+"scaffold WHERE scafsmi='"+cansmi+"'";
+    String sql="SELECT id FROM "+this.dbschema+"."+this.dbtableprefix+
+	"scaffold WHERE scafsmi='"+pg_utils.QuoteString(cansmi)+"'";
     ResultSet rset=pg_utils.executeSql(this.dbcon,sql); // Check ok?  How?
     if (!rset.next()) return null; //NOT FOUND
     return getScaffoldByID(rset.getLong("id"));
@@ -287,7 +285,8 @@ public class ScaffoldDB
   public boolean containsScaffoldByCansmi(String cansmi)
 	throws SQLException
   {
-    String sql="SELECT id FROM "+this.dbschema+"."+this.dbtableprefix+"scaffold WHERE scafsmi='"+cansmi+"'";
+    String sql="SELECT id FROM "+this.dbschema+"."+this.dbtableprefix+
+	"scaffold WHERE scafsmi='"+pg_utils.QuoteString(cansmi)+"'";
     ResultSet rset=pg_utils.executeSql(this.dbcon,sql);
     boolean ok=rset.next();
     rset.getStatement().close();
@@ -301,7 +300,8 @@ public class ScaffoldDB
 	throws SQLException
   {
     long id=0;
-    String sql="SELECT id FROM "+this.dbschema+"."+this.dbtableprefix+"scaffold WHERE scafsmi='"+cansmi+"'";
+    String sql="SELECT id FROM "+this.dbschema+"."+this.dbtableprefix+
+	"scaffold WHERE scafsmi='"+pg_utils.QuoteString(cansmi)+"'";
     ResultSet rset=pg_utils.executeSql(this.dbcon,sql);
     boolean ok=rset.next();
     if (!ok) return 0; //NOT FOUND
@@ -561,7 +561,7 @@ public class ScaffoldDB
   }
   /////////////////////////////////////////////////////////////////////////////
   /**	For testing only&#46;
-
+	<br/>
 	CREATE ROLE www WITH LOGIN PASSWORD 'foobar';
 	GRANT CONNECT ON DATABASE mydb TO www ;
 	GRANT CREATE ON DATABASE mydb TO www ;

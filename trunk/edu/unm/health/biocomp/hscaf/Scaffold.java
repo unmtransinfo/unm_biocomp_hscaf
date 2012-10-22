@@ -142,11 +142,10 @@ public class Scaffold extends Molecule implements Comparable<Object>
   */
   public boolean isLegal()
   {
-    if (this.isEmpty()) this.decompress();
+    if (this.isEmpty()) this.decompress(); // isEmpty() from Molecule
     if (this.getAtomCount()==0) return false;
     if (this.getCansmi().equals("c1ccccc1")) return false; //benzene disallowed
     if (this.getCansmi().equals("C1=CC=CC=C1")) return false; //benzene disallowed
-    //System.err.println("DEBUG: (isLegal) true ; cansmi: "+this.getCansmi());
     return true;
   }
   /////////////////////////////////////////////////////////////////////////////
@@ -161,27 +160,9 @@ public class Scaffold extends Molecule implements Comparable<Object>
     {
       if (cscaf.equals(scaf2)) { is_already_child=true; break; }
     }
-    //System.err.println("DEBUG: (addChild) is_already_child="+is_already_child+" cansmi: "+scaf2.getCansmi());
-    if (!is_already_child)
-    {
-      this.childscafs.add(scaf2);
-      return true;
-    }
-//    else  //replace (replacement may be stored and have known children).
-//    {
-//      for (int i=0; i<this.childscafs.size(); ++i)
-//      {
-//        Scaffold cscaf=this.childscafs.get(i);
-//        if (cscaf.equals(scaf2))
-//        {
-//          System.err.println("DEBUG: (addChild) i="+i);
-//          this.childscafs.add(i,scaf2);
-//          break;
-//        }
-//      }
-//    }
-    //System.err.println("DEBUG: (addChild) leaving...");
-    return false;
+    if (is_already_child) return false;
+    this.childscafs.add(scaf2);
+    return true;
   }
   /////////////////////////////////////////////////////////////////////////////
   public void setParentScaffold(Scaffold scaf2) { this.parentscaf=scaf2; }
@@ -223,14 +204,13 @@ public class Scaffold extends Molecule implements Comparable<Object>
   /////////////////////////////////////////////////////////////////////////////
   /**	Get Kekule SMILES for this scaffold&#46;  Recommended for export
 	as resulting SMILES will be more universally compatible with
-	other software&#46;
-	Lazy evaluation.
+	other software&#46; Lazy evaluation&#46;
   */
   public String getSmi()
   {
-    this.decompress();
     if (this.smi==null)
     {
+      this.decompress();
       try { this.smi=MolExporter.exportToFormat(this,this.smifmt); }
       catch (MolExportException e) { this.smi=""; }
       catch (IOException e) { this.smi=""; }
@@ -372,7 +352,6 @@ public class Scaffold extends Molecule implements Comparable<Object>
   {
     if (this==null) return "";
     String str=""+this.getID();
-    //if (this.getID()==0) System.err.println("DEBUG: (subTreeAsString) ID=0 ; cansmi: "+this.getCansmi());
     if (this.getChildCount()>0)
     {
       str+=":(";
@@ -388,25 +367,25 @@ public class Scaffold extends Molecule implements Comparable<Object>
     return str;
   }
   ///////////////////////////////////////////////////////////////////////////
-  /**	For storage; delete molecule object and 
-	retain canonical SMILES&#46;
+  /**	For storage; delete molecule object and retain canonical SMILES&#46;
+  	Canonical SMILES used since it is an identifier&#46;
   */
   public void compress()
   {
+    //System.err.println("DEBUG: Scaffold.compress: [id="+this.id+"]");
     if (this.cansmi==null) this.cansmi=this.getCansmi();
     this.smi=null;
     if (!this.isEmpty()) this.clear();
   }
   ///////////////////////////////////////////////////////////////////////////
-  /**	For storage; delete molecule object and 
-	retain canonical SMILES&#46;
+  /**	Reconstruct molecule object from stored canonical SMILES&#46;
   */
   public void decompress()
   {
     if (!this.isEmpty()) return; // already decompressed
-    if (this.cansmi==null) // error
+    if (this.cansmi==null)
     {
-      System.err.println("DEBUG: Should not happen!");
+      System.err.println("ERROR (Scaffold.decompress): [id="+this.id+"] No cansmi.  Should not happen!");
     }
     try { MolImporter.importMol(this.cansmi.getBytes(),"smiles:",null,this); }
     catch (MolFormatException e) { } // should not happen!

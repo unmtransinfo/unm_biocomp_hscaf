@@ -41,8 +41,5 @@ public class ScaffoldRecord
   {
     this.childIDs.add(id);
   }
-  public String toString()
-  {
-    return cansmi + "\t" + id ;
-  }
+  public String toString() { return cansmi + "\t" + id ; }
 }

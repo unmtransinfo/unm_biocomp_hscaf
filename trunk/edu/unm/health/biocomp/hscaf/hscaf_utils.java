@@ -3,6 +3,7 @@ package edu.unm.health.biocomp.hscaf;
 import java.io.*;
 import java.util.*;
 import java.util.regex.*;
+import java.sql.*;
 
 import chemaxon.formats.*;
 import chemaxon.sss.search.*;
@@ -12,7 +13,6 @@ import chemaxon.marvin.io.MolExportException;
 import chemaxon.calculations.TopologyAnalyser;
 
 import com.sleepycat.je.DatabaseException;
-
  
 /**	Contains internal static functions used in hierarchical scaffold analysis&#46; 
 	Not normally recommended for use by applications&#46;
@@ -22,7 +22,9 @@ import com.sleepycat.je.DatabaseException;
 	@see edu.unm.health.biocomp.hscaf.Scaffold
 	@see edu.unm.health.biocomp.hscaf.Linker
 	@see edu.unm.health.biocomp.hscaf.Sidechain
+	@see edu.unm.health.biocomp.hscaf.ScaffoldSet
 	@see edu.unm.health.biocomp.hscaf.ScaffoldStore
+	@see edu.unm.health.biocomp.hscaf.ScaffoldDB
 	@author Jeremy J Yang
 */
 public class hscaf_utils
@@ -30,6 +32,24 @@ public class hscaf_utils
   private static final String smifmt="cxsmiles:u-L-l-e-d-D-p-R-f-w";
   private hscaf_utils() {} //disallow default constructor
   private static final int HSCAF_MAX_COMPUTE_TIME=600;	//Max compute time in sec.
+  ///////////////////////////////////////////////////////////////////////////
+  public static int findChildScaffolds(Scaffold scaf,ScaffoldSet scafset)
+    throws SearchException,MolFormatException,DatabaseException,SQLException,IOException
+  {
+    return findChildScaffolds(scaf,scafset,null,null);
+  }
+  ///////////////////////////////////////////////////////////////////////////
+  public static int findChildScaffolds(Scaffold scaf,ScaffoldStore scafstore)
+    throws SearchException,MolFormatException,DatabaseException,SQLException,IOException
+  {
+    return findChildScaffolds(scaf,null,scafstore,null);
+  }
+  ///////////////////////////////////////////////////////////////////////////
+  public static int findChildScaffolds(Scaffold scaf,ScaffoldDB scafdb)
+    throws SearchException,MolFormatException,DatabaseException,SQLException,IOException
+  {
+    return findChildScaffolds(scaf,null,null,scafdb);
+  }
   ///////////////////////////////////////////////////////////////////////////
   /**   This recursive algorithm finds all child scaffolds&#46;  For each junction bond,
         copy scaffold and cut bond, resulting in two parts which may be valid
@@ -47,8 +67,8 @@ public class hscaf_utils
 	existing scaffold object, not new child candidate object&#46;  With
 	ScaffoldStore, new object must be used&#46;
   */
-  public static int findChildScaffolds(Scaffold scaf,ScaffoldSet scafset,ScaffoldStore scafstore)
-    throws SearchException,MolFormatException,DatabaseException
+  public static int findChildScaffolds(Scaffold scaf,ScaffoldSet scafset,ScaffoldStore scafstore,ScaffoldDB scafdb)
+    throws SearchException,MolFormatException,DatabaseException,SQLException,IOException
   {
     int n_cscafs=0;
     //System.err.println("DEBUG: (findChildScaffolds) ...");
@@ -106,12 +126,22 @@ public class hscaf_utils
             scafstore.populateScaffoldTree(cscaf);
             n_cscafs+=cscaf.getAllChildCount();
           }
+          else if (scafdb!=null && scafdb.containsScaffoldByCansmi(cscaf.getCansmi()))
+          {
+            ScaffoldRecord scafrec=scafdb.getScaffoldByCansmi(cscaf.getCansmi());
+            cscaf.setID(scafrec.getID());
+            boolean ok=scaf.addChild(cscaf);
+            ++n_cscafs;
+            cscaf.setParentScaffold(scaf);
+            scafdb.populateScaffoldTree(cscaf);
+            n_cscafs+=cscaf.getAllChildCount();
+          }
           else
           {
             boolean ok=scaf.addChild(cscaf);
             ++n_cscafs;
             cscaf.setParentScaffold(scaf);
-            n_cscafs+=findChildScaffolds(cscaf,scafset,scafstore); //recurse; size=0 if leaf
+            n_cscafs+=findChildScaffolds(cscaf,scafset,scafstore,scafdb); //recurse; size=0 if leaf
           }
         }
       }

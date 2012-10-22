@@ -16,16 +16,18 @@ import chemaxon.marvin.io.MolExportException;
 import edu.unm.health.biocomp.db.*;
 import edu.unm.health.biocomp.util.*;
 
-/// to do: [ ] parallelize 
+/// to do: [ ] parallelize (threads, db locks, etc.) 
 /// to do: [ ] -out_link and -out_chain
 
 /**	HierS hierarchical scaffolds application&#46;  Run program with
 	no args for command-line help&#46;
 	<br />
-	For each molecule in the input dataset, scaffolds are perceived, including the hierarchical scaffold
-	tree, and a set of unique scaffolds for the dataset is generated, with IDs assigned sequentially&#46;
+	For each molecule in the input dataset, scaffolds are perceived, including the hierarchical
+	scaffold tree, and a set of unique scaffolds for the dataset is generated, with IDs assigned
+	sequentially&#46;
 	The output molecule file is annotated with scaffold IDs&#46;
-	The output scaffold file is annotated with scaffold IDs and scaffold hierarchy tree (encoded as string).&#46;
+	The output scaffold file is annotated with scaffold IDs and scaffold hierarchy tree
+	(encoded as string).&#46;
 	<br />
 	@author Jeremy J Yang
 	@see edu.unm.health.biocomp.hscaf.ScaffoldTree
@@ -35,7 +37,7 @@ import edu.unm.health.biocomp.util.*;
 	@see edu.unm.health.biocomp.hscaf.hier_scaffolds_utils
 	@see edu.unm.health.biocomp.hscaf.ScaffoldSet
 	@see edu.unm.health.biocomp.hscaf.ScaffoldStore
-	@see edu.unm.health.biocomp.hscaf.ScaffoldEntity
+	@see edu.unm.health.biocomp.hscaf.ScaffoldDB
 */
 public class hier_scaffolds
 {
@@ -73,6 +75,7 @@ public class hier_scaffolds
   private static String rdb_user=null;
   private static String rdb_pw=null;
   private static String rdb_tableprefix="";
+  private static Integer rdb_reindex_per=5000;
 
   private static int maxatoms=100;
   private static int maxrings=10;
@@ -132,6 +135,7 @@ public class hier_scaffolds
       +"    -rdb_user DBUSER .......... RDB db user [$USER]\n"
       +"    -rdb_pw DBPW .............. RDB db password\n"
       +"    -rdb_tableprefix PREFIX ... RDB db table prefix\n"
+      +"    -rdb_reindex_per N ........ RDB reindex once per N mols ["+rdb_reindex_per+"]\n"
       +"  Misc:\n"
       +"    -maxatoms MAX ............. max atom count of input mol ["+maxatoms+"]\n"
       +"    -maxrings MAX ............. max ring count of input mol ["+maxrings+"]\n"
@@ -186,6 +190,7 @@ public class hier_scaffolds
       else if (args[i].equals("-rdb_user")) rdb_user=args[++i];
       else if (args[i].equals("-rdb_pw")) rdb_pw=args[++i];
       else if (args[i].equals("-rdb_tableprefix")) rdb_tableprefix=args[++i];
+      else if (args[i].equals("-rdb_reindex_per")) rdb_reindex_per=Integer.parseInt(args[++i]);
 
       else if (args[i].equals("-nmax")) nmax=Integer.parseInt(args[++i]);
       else if (args[i].equals("-nskip")) nskip=Integer.parseInt(args[++i]);
@@ -230,14 +235,14 @@ public class hier_scaffolds
       if (rdb_resume || rdb_predelete)
         help("ERROR: -rdb_resume, -rdb_predelete incompatible with -rdb_dump.");
 
-      if (verbose>0) System.err.println("Dumping scaffold DB at: "+rdb_host);
+      if (verbose>0) System.err.println("Dumping scaffold DB: "+rdb_host);
       ScaffoldDB scafdb = null;
       try {
         scafdb = new ScaffoldDB(rdb_host,rdb_port,rdb_name,rdb_schema,rdb_user,rdb_pw,rdb_tableprefix,
                 stereo,keep_nitro_attachments,false);
         File fout = new File(rdb_dump);
         long nscaf = scafdb.dumpToFile(fout,verbose);
-        System.err.println("Scaffold DB at: "+rdb_host+" dumped to: "+rdb_dump);
+        System.err.println("Scaffold DB: "+rdb_host+" dumped: "+rdb_dump);
       }
       catch (SQLException e) {
         System.err.println("SQLException: "+e.getMessage());
@@ -552,6 +557,13 @@ public class hier_scaffolds
         t_i=t_j;
       }
       if (nmax>0 && n_mol==(nmax+nskip)) break;
+      if (rdb && ((n_mol-nskip)%rdb_reindex_per)==0)
+      {
+        if (verbose>0)
+          System.err.println("REINDEX-ing database: "+rdb_host+":"+rdb_port+":"+rdb_name+":"+rdb_schema);
+        try { scafdb.reindex(); }
+        catch (SQLException e) { System.err.println("SQLException: "+e.getMessage()); }
+      }
     }
     int n_scaf_unique=0;
     if (bdb)
