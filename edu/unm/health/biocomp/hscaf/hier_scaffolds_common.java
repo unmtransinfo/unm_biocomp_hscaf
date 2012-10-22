@@ -30,8 +30,8 @@ public class hier_scaffolds_common
     System.err.println(msg+"\n"
       +"hier_scaffolds_common - search for common HierS scaffolds\n"
       +"\n"
-      +"From the University of New Mexico Division of Biocomputing\n"
-      +"(http://biocomp.health.unm.edu/).\n"
+      +"From the University of New Mexico Translational Informatics Division\n"
+      +"(http://medicine.unm.edu/informatics/).\n"
       +"\n"
       +"usage: hier_scaffolds_common [options]\n"
       +"  required:\n"
@@ -176,7 +176,7 @@ public class hier_scaffolds_common
 
       if (!ok)
       {
-        if (ofile!=null) { if (!writeMol(molWriter,outmol)) ++n_err; }	//empty placholder mol
+        if (ofile!=null) { if (!WriteMol(molWriter,outmol)) ++n_err; }	//empty placholder mol
         continue;
       }
 
@@ -214,7 +214,7 @@ public class hier_scaffolds_common
       if (verbose>0)
         System.err.println(String.format("\tscaffold Tanimoto similarity = %.2f",sim));
 
-      if (ofile!=null) { if (!writeMol(molWriter,outmol)) ++n_err; }
+      if (ofile!=null) { if (!WriteMol(molWriter,outmol)) ++n_err; }
     }
     System.err.println("Total mols: "+n_mol);
     System.err.println("Max common scafs found: "+n_mcscaf);
@@ -225,7 +225,7 @@ public class hier_scaffolds_common
     System.err.println("Multi-fragment mols (largest part analyzed only): "+n_mol_frag);
   }
   /////////////////////////////////////////////////////////////////////////////
-  private static boolean writeMol(MolExporter molWriter,Molecule mol)
+  private static boolean WriteMol(MolExporter molWriter,Molecule mol)
   {
     try {
       molWriter.write(mol);

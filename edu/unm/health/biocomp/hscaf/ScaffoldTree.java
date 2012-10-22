@@ -19,8 +19,9 @@ import chemaxon.marvin.io.MolExportException;
 	tree of {@link Scaffold}s, the largest of which is the root scaffold
 	(and the Bemis-Murko framework)&#46;  The ScaffoldTree object
 	does not contain the {@link Scaffold} objects, which may be contained
-	in a {@link ScaffoldSet} or re-constructed from {@link ScaffoldStore}
-	{@link ScaffoldEntity}s&#46;
+	in a {@link ScaffoldSet} or re-constructed from
+	{@link ScaffoldStore} / {@link ScaffoldEntity}s or
+	{@link ScaffoldDB} / {@link ScaffoldRecord}s &#46;
 	The ScaffoldTree object also contains the {@link Linker}s and {@link Sidechain}s
 	for the input molecule, and a copy of the input molecule&#46;
 	<br />
@@ -112,58 +113,72 @@ public class ScaffoldTree
     this.linkers = new ArrayList<Linker>(); //default empty
     this.sidechains = new ArrayList<Sidechain>(); //default empty
     if (this.rootscaf==null) return;
-    boolean scaf_known=false;
     try
     {
-      if  (scafset!=null && scafset.containsScaffold(this.rootscaf)) // Scaf present in scafset?
+      if  (scafset!=null)
       {
-        // Replace root scaffold with stored instance.
-        this.rootscaf=scafset.getScaffoldByID(scafset.getScaffoldID(this.rootscaf));
-        scaf_known=true;
-      }
-      else if (scafstore!=null && scafstore.scaffoldByCanSmi.contains(this.rootscaf.getCansmi()))
-      {
-	ScaffoldEntity scent=scafstore.scaffoldByCanSmi.get(this.rootscaf.getCansmi());
-        long id=scent.getId();
-        this.rootscaf.setID(id);
-        scaf_known=true;
-      }
-      else if (scafdb!=null && scafdb.containsScaffoldByCansmi(this.rootscaf.getCansmi()))
-      {
-	ScaffoldRecord scafrec=scafdb.getScaffoldByCansmi(this.rootscaf.getCansmi());
-        long id=scafrec.getID();
-        this.rootscaf.setID(id);
-        scaf_known=true;
-      }
-      else //Does this work (set,store,db = null,null,null)?
-      {
-        if (this.rootscaf.isLegal())
+        if  (scafset.containsScaffold(this.rootscaf)) // Scaf present in scafset?
         {
-          hscaf_utils.findChildScaffolds(this.rootscaf,scafset,scafstore);
-          rmJBonds(this.mol);
-          this.linkers=findLinkers(this.mol);
-          this.sidechains=findSidechains(this.mol);
+          // Replace rootscaf with stored instance.
+          this.rootscaf=scafset.getScaffoldByID(scafset.getScaffoldID(this.rootscaf));
         }
-        else
-          this.rootscaf=null;
-      }
-      if (this.rootscaf!=null)
-      {
-        if (scafset!=null) scafset.mergeScaffoldTree(this.rootscaf); // Scaf IDs assigned here.
-        else if (scafstore!=null)
+        else // New scaf.
         {
-          if (scaf_known)
-            scafstore.populateScaffoldTree(this.rootscaf); // Scaf IDs assigned here.
-          else
+          if (this.rootscaf.isLegal())
+          {
+            hscaf_utils.findChildScaffolds(this.rootscaf,scafset);
+            rmJBonds(this.mol);
+            this.linkers=findLinkers(this.mol);
+            this.sidechains=findSidechains(this.mol);
+            scafset.mergeScaffoldTree(this.rootscaf); // Scaf IDs assigned here.
+          }
+        }
+      }
+      else if (scafstore!=null)
+      {
+        if (scafstore.scaffoldByCanSmi.contains(this.rootscaf.getCansmi())) // Scaf present in scafstore?
+        {
+	  ScaffoldEntity scent=scafstore.scaffoldByCanSmi.get(this.rootscaf.getCansmi());
+          long id=scent.getId();
+          this.rootscaf.setID(id);
+          scafstore.populateScaffoldTree(this.rootscaf); // Scaf IDs assigned here.
+        }
+        else // New scaf.
+        {
+          if (this.rootscaf.isLegal())
+          {
+            hscaf_utils.findChildScaffolds(this.rootscaf,scafstore);
+            rmJBonds(this.mol);
+            this.linkers=findLinkers(this.mol);
+            this.sidechains=findSidechains(this.mol);
             scafstore.mergeScaffoldTree(this.rootscaf); // Scaf IDs assigned here.
+          }
         }
-        else if (scafdb!=null)
+      }
+      else if (scafdb!=null)
+      {
+        if (scafdb.containsScaffoldByCansmi(this.rootscaf.getCansmi())) // Scaf present in scafdb?
         {
-          if (scaf_known)
-            scafdb.populateScaffoldTree(this.rootscaf); // Scaf IDs assigned here.
-          else
-            scafdb.mergeScaffoldTree(this.rootscaf); // Scaf IDs assigned here.
+	  ScaffoldRecord scafrec=scafdb.getScaffoldByCansmi(this.rootscaf.getCansmi());
+          long id=scafrec.getID();
+          this.rootscaf.setID(id);
+          scafdb.populateScaffoldTree(this.rootscaf); // Scaf IDs assigned here.
         }
+        else // New scaf.
+        {
+          if (this.rootscaf.isLegal())
+          {
+            hscaf_utils.findChildScaffolds(this.rootscaf,scafdb);
+            rmJBonds(this.mol);
+            this.linkers=findLinkers(this.mol);
+            this.sidechains=findSidechains(this.mol);
+            scafdb.mergeScaffoldTree(this.rootscaf); // Scaf IDs assigned here.
+          }
+        }
+      }
+      else
+      {
+        System.err.println("ERROR (ScaffoldTree): Should not happen; no set, store or db.");
       }
     }
     catch (SQLException e)
