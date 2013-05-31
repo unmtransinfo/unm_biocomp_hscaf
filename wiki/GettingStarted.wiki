@@ -4,9 +4,10 @@ This package can be used via two Java applications or its API.  To get started i
 
 = Using the Applications =
 
-The two applications are:
+The applications are:
   * *hier_scaffolds* - HierS scaffolds analyzer
   * *hier_scaffolds_common* - search for common HierS scaffolds
+  * *hier_scaffolds_stats* - postprocess/analyze hier_scaffolds output
 
 hier_scaffolds application command line help
 {{{
@@ -58,6 +59,7 @@ usage: hier_scaffolds [options]
     -rdb_user DBUSER .......... RDB db user [$USER]
     -rdb_pw DBPW .............. RDB db password
     -rdb_tableprefix PREFIX ... RDB db table prefix
+    -rdb_reindex_per N ........ RDB reindex once per N mols [5000]
   Misc:
     -maxatoms MAX ............. max atom count of input mol [100]
     -maxrings MAX ............. max ring count of input mol [10]
@@ -93,6 +95,29 @@ hier_scaffolds_common application command line help
     -v ........................ verbose
     -vv ....................... very verbose
     -h ........................ this help
+}}}
+
+hier_scaffolds_stats application command line help
+{{{
+hier_scaffolds_stats - postprocess HierS scaffolds output (from hier_scaffolds)
+
+From the University of New Mexico Division Translational Informatics Division
+(http://medicine.unm.edu/informatics/).
+
+usage: hier_scaffolds_stats [options]
+  required:
+    -i IFILE ................... input file of molecules annotated with scaf info
+    -in_scaf INSCAF ............ input file of scafs, numbered sequentially
+    -out_scaf OUTSCAF .......... same scafs; stats appended to titles
+  options:
+    -scaflist_title  ........... scaf/link/chain list is title
+    -scaflist_append2title ..... scaf/link/chain is 2nd title field
+    -scaflist_sdtag SDTAG ...... scaf list input SD dataitem
+    -report_mol_lists_ids ...... after stats, append list of mol ids (maybe fat)
+    -sort_by_frequency ......... output scaf/link/chain lists sorted
+    -v ......................... verbose
+    -vv ........................ very verbose
+    -h ......................... this help
 }}}
 
 == Example commands ==
