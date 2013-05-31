@@ -7,7 +7,7 @@ import java.util.concurrent.*;
 
 import edu.unm.health.biocomp.threads.*;
  
-/**	Callable task for processing PostgreSql search&#46;
+/**	Callable task for processing PostgreSql search.
 	@author Jeremy J Yang
 */
 public class DBQuery_PG_Task

@@ -16,21 +16,20 @@ import edu.unm.health.biocomp.hscaf.*;
 import edu.unm.health.biocomp.db.*;
 
 /////////////////////////////////////////////////////////////////////////////
-/**	Contains static functions used in hierarchical scaffold analysis&#46;
-	These public API functions for use in applications&#46;
+/**	Contains static functions used in hierarchical scaffold analysis.
+	These public API functions for use in applications.
 	@see edu.unm.health.biocomp.hscaf.ScaffoldTree
 	@see edu.unm.health.biocomp.hscaf.Scaffold
 	@see edu.unm.health.biocomp.hscaf.Linker
 	@see edu.unm.health.biocomp.hscaf.Sidechain
-	@see edu.unm.health.biocomp.hscaf.hier_scaffolds
 	@author Jeremy J Yang
 */
 public class hier_scaffolds_utils
 {
   private hier_scaffolds_utils() {} //disallow default constructor
   /////////////////////////////////////////////////////////////////////////////
-  /**	Finds maximum common scaffold in two ScaffoldTrees&#46;
-	If none returns null&#46;
+  /**	Finds maximum common scaffold in two ScaffoldTrees.
+	If none returns null.
   */
   public static Scaffold maxCommonScaffold(ScaffoldTree scaftreeA,ScaffoldTree scaftreeB)
   {
@@ -62,6 +61,18 @@ public class hier_scaffolds_utils
     }
     return null;
   }
+  /////////////////////////////////////////////////////////////////////////////
+  /**	Finds maximum common scaffold in two molecules.
+	If none returns null.
+  */
+  public static Scaffold maxCommonScaffold(Molecule molA,Molecule molB,
+	boolean stereo,boolean keep_nitro_attachments,ScaffoldSet scafset)
+	throws IOException,SearchException,MolFormatException,MolExportException,ScaffoldException
+  {
+    ScaffoldTree scaftreeA = new ScaffoldTree(molA,stereo,keep_nitro_attachments,scafset);
+    ScaffoldTree scaftreeB = new ScaffoldTree(molB,stereo,keep_nitro_attachments,scafset);
+    return maxCommonScaffold(scaftreeA,scaftreeB);
+  }
   ///////////////////////////////////////////////////////////////////////////
   /**	@return	largest fragment of fragmented molecule
   */
@@ -78,8 +89,8 @@ public class hier_scaffolds_utils
     return partmols[i_largest];
   }
   ///////////////////////////////////////////////////////////////////////////
-  /**	Returns similarity metric designed to reflect the significance of
-	the maximum common scaffold between two molecules&#46;  Given by the
+  /**	Similarity metric designed to reflect the significance of
+	the maximum common scaffold between two molecules.  Given by the
 	formula:
 	<br><tt>
 	&nbsp; <b>sim = nc / (na + nb - nc) </b><br>
@@ -88,8 +99,8 @@ public class hier_scaffolds_utils
 	&nbsp; na = # atoms in max scaffold, mol A <br>
 	&nbsp; nb = # atoms in max scaffold, mol B <br>
 	</tt>
-	This is an experimental functionality&#46;  Intended for use in combination
-	with a standard whole-molecule similarity metric&#46;
+	This is an experimental functionality.  For use in combination
+	with a standard whole-molecule similarity metric.
   	@return	similarity metric
   */
   public static float commonScaffoldTanimoto(ScaffoldTree scaftreeA,ScaffoldTree scaftreeB)
@@ -102,9 +113,19 @@ public class hier_scaffolds_utils
     float sim = (float)nc / (nA + nB - nc);
     return sim;
   }
+  /**	
+  */
+  public static float commonScaffoldTanimoto(Molecule molA,Molecule molB,
+	boolean stereo,boolean keep_nitro_attachments,ScaffoldSet scafset)
+	throws IOException,SearchException,MolFormatException,MolExportException,ScaffoldException
+  {
+    ScaffoldTree scaftreeA = new ScaffoldTree(molA,stereo,keep_nitro_attachments,scafset);
+    ScaffoldTree scaftreeB = new ScaffoldTree(molB,stereo,keep_nitro_attachments,scafset);
+    return commonScaffoldTanimoto(scaftreeA,scaftreeB);
+  }
   ///////////////////////////////////////////////////////////////////////////
-  /**	Returns similarity metric designed to reflect the significance of
-	the maximum common scaffold between two molecules&#46;  Given by the
+  /**	Similarity metric designed to reflect the significance of
+	the maximum common scaffold between two molecules.  Given by the
 	formula:
 	<br><tt>
 	&nbsp; <b>sim = nc / (na + nb - nc) </b><br>
@@ -113,9 +134,9 @@ public class hier_scaffolds_utils
 	&nbsp; na = # atoms in max scaffold, mol A <br>
 	&nbsp; nb = # atoms in max scaffold, mol B <br>
 	</tt>
-	This is an experimental functionality&#46;  Intended for use in combination
-	with a standard whole-molecule similarity metric&#46;
-	Use this faster method if mcScaf is already calculated (with maxCommonScaffold())&#46;
+	This is an experimental functionality.  For use in combination
+	with a standard whole-molecule similarity metric.
+	Use this faster method if mcScaf is already calculated (with maxCommonScaffold()).
   	@return	similarity metric
   */
   public static float commonScaffoldTanimoto(ScaffoldTree scaftreeA,ScaffoldTree scaftreeB,
@@ -129,10 +150,10 @@ public class hier_scaffolds_utils
     return sim;
   }
   ///////////////////////////////////////////////////////////////////////////
-  /**	Returns simple count of all ringsystems&#46;  Equivalent to count of
-	all disconnected fragments after removing linkers&#46;  Used to 
+  /**	Returns simple count of all ringsystems.  Equivalent to count of
+	all disconnected fragments after removing linkers.  Used to 
 	estimate computational demands and identify high-cost
-	"pathological" molecules for special handling&#46;
+	"pathological" molecules for special handling.
   	@return simple count of all ringsystems
   */
   public static int rawRingsystemCount(Molecule mol)
@@ -162,7 +183,7 @@ public class hier_scaffolds_utils
   }
   ///////////////////////////////////////////////////////////////////////////
   /**	For convenience depicting molecules with highlighted atoms
-	corresponding to a scaffold&#46;
+	corresponding to a scaffold.
 	@param	mol	molecule containing scaffold
 	@param	qmol	molecule representing scaffold
   */
@@ -206,7 +227,7 @@ public class hier_scaffolds_utils
   }
   ///////////////////////////////////////////////////////////////////////////
   /**	For convenience depicting molecules with highlighted atoms
-	corresponding to a scaffold&#46;
+	corresponding to a scaffold.
 	@param	mol	molecule containing scaffold
 	@param	qmol	molecule representing scaffold
   */
@@ -223,7 +244,7 @@ public class hier_scaffolds_utils
   }
   ///////////////////////////////////////////////////////////////////////////
   /**	For convenience depicting molecules with highlighted atoms
-	corresponding to a scaffold&#46;
+	corresponding to a scaffold.
 	@param	smi	smiles containing scaffold
 	@param	qsmi	smiles representing scaffold
   */
@@ -236,7 +257,7 @@ public class hier_scaffolds_utils
   }
   /////////////////////////////////////////////////////////////////////////////
   /**   Minimal sanity check whether DB exists ("scaffold" and "scaf2scaf"
-	tables) to support {@link ScaffoldDB} object&#46;
+	tables) to support {@link ScaffoldDB} object.
   */
   public static boolean CheckExistsDB(
 	String dbhost,

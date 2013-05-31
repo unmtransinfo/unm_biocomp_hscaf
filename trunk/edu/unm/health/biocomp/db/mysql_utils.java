@@ -8,10 +8,9 @@ import javax.naming.*;
 
 import com.mysql.jdbc.Driver;
 
-
-/**	Static utility methods for MySQL databases&#46;
+/**	Static utility methods for MySQL databases.
 	<br />
-	Uses MySQL JDBC driver (com.mysql.jdbc.Driver)&#46;
+	Uses MySQL JDBC driver (com.mysql.jdbc.Driver).
 	<br />
 	@author Jeremy J Yang
 	@see java.sql.DriverManager
@@ -19,14 +18,21 @@ import com.mysql.jdbc.Driver;
 */
 public class mysql_utils
 {
+  private static String dbhost="localhost";
+  private static String dbname="badapple";
+  private static String dbusr="bard";
+  private static String dbpw="stratford";
+  private static Integer dbport=3306;
+
   /////////////////////////////////////////////////////////////////////////////
-  /**	Return text with server status information&#46;
+  /**	Return text with server status information.
   */
   public static String serverStatusTxt(Connection dbcon)
   {
     String txt="";
     try {
-      ResultSet rset=executeSql(dbcon,"SHOW SERVER_VERSION");
+      //ResultSet rset=executeSql(dbcon,"STATUS");
+      ResultSet rset=executeSql(dbcon,"SELECT VERSION()");
       if (rset.next())
         txt+=("MySQL server version: "+rset.getString(1));
       rset.getStatement().close();
@@ -38,7 +44,7 @@ public class mysql_utils
     return txt;
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**   Executes SQL statement&#46; Normally use this function&#46;
+  /**   Executes SQL statement. Normally use this function.
   */
   public static ResultSet executeSql(Connection dbcon,String sql)
       throws SQLException
@@ -48,7 +54,7 @@ public class mysql_utils
     return rset;
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**   Executes SQL statement&#46; Use this function for scrollable ResultSet&#46;
+  /**   Executes SQL statement. Use this function for scrollable ResultSet.
   */
   public static ResultSet executeSqlScrollable(Connection dbcon,String sql)
       throws SQLException
@@ -58,7 +64,21 @@ public class mysql_utils
     return rset;
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Return MySQL connection&#46;
+  /**   Executes SQL statement. Use this function for non-queries,
+        UPDATE, INSERT, DELETE, CREATE, REINDEX, etc.
+        Note that autocommit is normally true so there is no
+        need to call commit() directly.
+  */
+  public static boolean execute(Connection dbcon,String sql)
+      throws SQLException
+  {
+    Statement stmt=dbcon.createStatement();
+    boolean ok=stmt.execute(sql);
+    stmt.close();
+    return ok;
+  }
+  /////////////////////////////////////////////////////////////////////////////
+  /**	Return MySQL connection.
   */
   public static Connection dbConnect(String dbhost,Integer dbport,String dbid,String dbusr,String dbpw)
     throws SQLException
@@ -67,6 +87,7 @@ public class mysql_utils
     Connection dbcon=DriverManager.getConnection("jdbc:mysql://"+dbhost+":"+dbport+"/"+dbid,dbusr,dbpw);
     return dbcon;
   }
+  /////////////////////////////////////////////////////////////////////////////
   public static Connection dbConnectBard()
     throws SQLException,javax.naming.NamingException
   {
@@ -74,7 +95,6 @@ public class mysql_utils
     javax.naming.Context ctx = (javax.naming.Context) ctx_init.lookup("java:comp/env");
     javax.sql.DataSource ds = (javax.sql.DataSource) ctx.lookup("jdbc/bard");
     Connection dbcon=ds.getConnection();
-
     return dbcon;
   }
   /////////////////////////////////////////////////////////////////////////////
@@ -84,10 +104,11 @@ public class mysql_utils
       +"mysql_utils - mysql utilities\n"
       +"usage: mysql_utils [options]\n"
       +"  required:\n"
-      +"    -dbhost <HOST> ... \n"
-      +"    -dbname <NAME> ... \n"
-      +"    -dbusr <USER> ... \n"
-      +"    -dbpw <PW> ... \n"
+      +"    -dbhost <HOST> ......... ["+dbhost+"]\n"
+      +"    -dbport <PORT> ......... ["+dbport+"]\n"
+      +"    -dbname <NAME> ......... ["+dbname+"]\n"
+      +"    -dbusr <USER> .......... ["+dbusr+"]\n"
+      +"    -dbpw <PW> ............. [*********]\n"
       +"  mode (one of):\n"
       +"    -describe .............. describe database\n"
       +"    -v ..................... verbose\n"
@@ -95,14 +116,6 @@ public class mysql_utils
       +"    -h ..................... this help\n");
     System.exit(1);
   }
-  private static int verbose=0;
-  private static String dbhost="localhost";
-  private static String dbname="bard";
-  private static String dbusr="bard";
-  private static String dbpw="foobar";
-  private static Boolean describe=false;
-  private static Boolean bard=false;
-
   /////////////////////////////////////////////////////////////////////////////
   private static void parseCommand(String args[])
   {
@@ -113,6 +126,7 @@ public class mysql_utils
       else if (args[i].equals("-dbname")) dbname=args[++i];
       else if (args[i].equals("-dbusr")) dbusr=args[++i];
       else if (args[i].equals("-dbpw")) dbpw=args[++i];
+      else if (args[i].equals("-dbport")) dbport=Integer.parseInt(args[++i]);
       else if (args[i].equals("-describe")) describe=true;
       else if (args[i].equals("-bard")) bard=true;
       else if (args[i].equals("-v")) verbose=1;
@@ -121,8 +135,13 @@ public class mysql_utils
       else help("Unknown option: "+args[i]);
     }
   }
+
+  private static int verbose=0;
+  private static Boolean describe=false;
+  private static Boolean bard=false;
+
   /////////////////////////////////////////////////////////////////////////////
-  /**	Simple test connection&#46;
+  /**	Simple test connection.
   */
   public static void main(String[] args)
 	throws IOException,SQLException
@@ -138,7 +157,7 @@ public class mysql_utils
       System.exit(0);
     }
 
-    try { dbcon=dbConnect(dbhost,3306,dbname,dbusr,dbpw); }
+    try { dbcon=dbConnect(dbhost,dbport,dbname,dbusr,dbpw); }
     catch (SQLException e) { help("MySQL connection failed:"+e.getMessage()); }
 
     if (dbcon!=null)
@@ -146,16 +165,25 @@ public class mysql_utils
 
     if (describe)
     {
-      DatabaseMetaData meta=dbcon.getMetaData();
       String txt="";
-      txt+=(meta.getDatabaseProductName()+" "+meta.getDatabaseMajorVersion()+"."+meta.getDatabaseMinorVersion()+"\n");
-      txt+=(meta.getDriverName()+" "+meta.getDriverVersion()+"\n");
-      ArrayList<String> tables = new ArrayList<String>(Arrays.asList("assay","compound","substance","protein_target","source"));
+      if (verbose>0)
+      {
+        DatabaseMetaData meta=dbcon.getMetaData();
+        txt+=("server: "+meta.getDatabaseProductName()+" "+meta.getDatabaseMajorVersion()+"."+meta.getDatabaseMinorVersion()+"\n");
+        txt+=("driver (client): "+meta.getDriverName()+" "+meta.getDriverVersion()+"\n");
+      }
+
+      ArrayList<String> tables = new ArrayList<String>();
+      ResultSet rset=executeSql(dbcon,"SHOW TABLES");
+      while (rset.next()) tables.add(rset.getString(1));
+      rset.getStatement().close();
+      Collections.sort(tables);
+
       for (String table: tables)
       {
-        ResultSet rset=executeSql(dbcon,"SELECT count(*) FROM "+table);
-        if (rset.next()) txt+=("count("+table+"): "+rset.getString(1)+"\n");
-        rset.getStatement().close();
+        ResultSet rset2=executeSql(dbcon,"SELECT count(*) FROM "+table);
+        if (rset2.next()) txt+=("count("+table+"): "+rset2.getString(1)+"\n");
+        rset2.getStatement().close();
       }
       System.err.println(txt);
     }

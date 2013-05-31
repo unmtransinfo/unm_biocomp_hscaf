@@ -4,14 +4,14 @@ import java.io.*;
 import java.util.*;
 import java.text.*;
 
-/**	Static methods for file processing&#46;
+/**	Static methods for file processing.
 	@author Jeremy J Yang
 */
 public class file_utils
 {
   private file_utils() {} //disable default constructor
   /////////////////////////////////////////////////////////////////////////////
-  /**	Human readable file size&#46;
+  /**	Human readable file size.
   */
   public static String niceBytes(long bytes)
   {

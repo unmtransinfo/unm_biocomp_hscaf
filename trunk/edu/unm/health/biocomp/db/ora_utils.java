@@ -6,9 +6,9 @@ import java.sql.*;
 
 import oracle.jdbc.driver.OracleDriver;
 
-/**	Static utility methods for Oracle databases&#46;
+/**	Static utility methods for Oracle databases.
 	<br />
-	Uses Oracle JDBC driver (oracle.jdbc.driver.OracleDriver)&#46;
+	Uses Oracle JDBC driver (oracle.jdbc.driver.OracleDriver).
 	<br />
 	@author Jeremy J Yang
 	@see java.sql.DriverManager
@@ -17,7 +17,7 @@ import oracle.jdbc.driver.OracleDriver;
 public class ora_utils
 {
   /////////////////////////////////////////////////////////////////////////////
-  /**	Return text with server status information&#46;
+  /**	Return text with server status information.
   */
   public static String serverStatusTxt(Connection dbcon)
   {
@@ -35,7 +35,7 @@ public class ora_utils
     return txt;
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**   Executes SQL statement&#46; Normally use this function&#46;
+  /**   Executes SQL statement. Normally use this function.
   */
   public static ResultSet executeSql(Connection dbcon,String sql)
       throws SQLException
@@ -45,7 +45,21 @@ public class ora_utils
     return rset;
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Return Oracle connection&#46;
+  /**   Executes SQL statement. Use this function for non-queries,
+        UPDATE, INSERT, DELETE, CREATE, REINDEX, etc.
+        Note that autocommit is normally true so there is no
+        need to call commit() directly.
+  */
+  public static boolean execute(Connection dbcon,String sql)
+      throws SQLException
+  {
+    Statement stmt=dbcon.createStatement();
+    boolean ok=stmt.execute(sql);
+    stmt.close();
+    return ok;
+  }
+  /////////////////////////////////////////////////////////////////////////////
+  /**	Return Oracle connection.
   */
   public static Connection dbConnect(String dbhost,Integer dbport,String dbid,String dbusr,String dbpw)
     throws SQLException

@@ -14,16 +14,16 @@ import edu.unm.health.biocomp.util.*;
 
 //// to do: [ ] -in_link, -in_chain, -out_link, -out_chain (but first must fix hier_scaffolds.java).
 
-/**	HierS hierarchical scaffolds postprocess application&#46;  Run program with
-	no args for command-line help&#46;  Key task is to generate scaffolds file
-	annotated with occurance info including compound IDs&#46;
+/**	HierS hierarchical scaffolds postprocess application.  Run program with
+	no args for command-line help.  Key task is to generate scaffolds file
+	annotated with occurance info including compound IDs.
 	<br />
-	Molecule files normally should be SMILES format&#46;  The SMILES "name" is a space delimited
-	set of fields: (1) compound ID (integer), (2) set of scaffold IDs&#46;  For example:
+	Molecule files normally should be SMILES format.  The SMILES "name" is a space delimited
+	set of fields: (1) compound ID (integer), (2) set of scaffold IDs.  For example:
 	FC1=CC=C(NC2=NC(=NC3=CC=CC=C23)C2=CN=CC=C2)C=C1 1877191 S:4,5,6,17,18
 	<br />
 	Input scaffold file also normally SMILES, with "name" delimited set of fields:
-	(1) scaffold ID, and (2) scaffold tree string&#46;  For example:
+	(1) scaffold ID, and (2) scaffold tree string.  For example:
 	N(C1=CC=NC=C1)C1=C2C=CC=CC2=NC(=N1)C1=COC=C1    35 35:(38:(5,6),6,36:(5,37),37)
 	<br />
 	@author Jeremy J Yang
@@ -312,6 +312,7 @@ public class hier_scaffolds_stats
         System.err.println(""+n_mol+". "+molname+"\n\t"+smi);
 
       // molname format:
+      // 1st field must be a unique ID integer (CID).
       // <CID><space>S:[ID1,ID2...]<space>L:[ID1,ID2...]<space>C:[ID1,ID2...]
 
       if (!molname.matches("[0-9]+\\s+S:.*$"))
@@ -423,8 +424,8 @@ public class hier_scaffolds_stats
     if (sort_by_frequency)
     {
       Collections.sort(scafs_list);
-    //  if (ifile_link!=null) Collections.sort(links_list);
-    //  if (ifile_chain!=null) Collections.sort(chains_list);
+      //if (ifile_link!=null) Collections.sort(links_list);
+      //if (ifile_chain!=null) Collections.sort(chains_list);
     }
 
     // scaffolds:
@@ -553,6 +554,7 @@ class ScaffoldInfo implements Comparable<Object>
   ArrayList<Long> cids;
   ScaffoldInfo(Long _id)
   {
+    this.cids = new ArrayList<Long>();
     this.id=_id;
   }
   void setSmiles(String _smiles) { this.smiles=_smiles; }
@@ -571,11 +573,11 @@ class ScaffoldInfo implements Comparable<Object>
     return this.cids;
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**   For sorting by frequency&#46;
+  /**   For sorting by frequency.
   */
   public int compareTo(Object o) throws ClassCastException
   {
-    return ((ScaffoldInfo)o).cids.size()-this.cids.size();
+    return ((ScaffoldInfo)o).cids.size()-this.cids.size(); //crashing NullPointerException...
   }
 }
 ///////////////////////////////////////////////////////////////////////////////
@@ -602,7 +604,7 @@ class ScaffoldInfo implements Comparable<Object>
 //    return this.cids;
 //  }
 //  /////////////////////////////////////////////////////////////////////////////
-//  /**   For sorting by frequency&#46;
+//  /**   For sorting by frequency.
 //  */
 //  public int compareTo(Object o) throws ClassCastException
 //  {
@@ -633,7 +635,7 @@ class ScaffoldInfo implements Comparable<Object>
 //    return this.cids;
 //  }
 //  /////////////////////////////////////////////////////////////////////////////
-//  /**   For sorting by frequency&#46;
+//  /**   For sorting by frequency.
 //  */
 //  public int compareTo(Object o) throws ClassCastException
 //  {

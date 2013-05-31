@@ -10,9 +10,9 @@ import org.postgresql.Driver;
 //import edu.unm.health.biocomp.http.*;
 
 
-/**	Static utility methods for PostgreSQL databases&#46;
+/**	Static utility methods for PostgreSQL databases.
 	<br />
-	Uses PostgreSQL JDBC driver (org.postgresql.Driver)&#46;
+	Uses PostgreSQL JDBC driver (org.postgresql.Driver).
 	<br />
 	@author Jeremy J Yang
 	@see java.sql.DriverManager
@@ -21,7 +21,7 @@ import org.postgresql.Driver;
 public class pg_utils
 {
   /////////////////////////////////////////////////////////////////////////////
-  /**	Return text with server status information&#46;
+  /**	Return text with server status information.
   */
   public static String serverStatusTxt(Connection dbcon)
   {
@@ -39,7 +39,7 @@ public class pg_utils
     return txt;
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**   Executes SQL statement&#46; Normally use this function&#46;
+  /**   Executes SQL statement. Normally use this function for SELECTs.
   */
   public static ResultSet executeSql(Connection dbcon,String sql)
       throws SQLException
@@ -49,7 +49,7 @@ public class pg_utils
     return rset;
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**   Executes SQL statement&#46; Use this function for scrollable ResultSet&#46;
+  /**   Executes SQL statement. Use this function for scrollable ResultSet.
   */
   public static ResultSet executeSqlScrollable(Connection dbcon,String sql)
       throws SQLException
@@ -59,8 +59,10 @@ public class pg_utils
     return rset;
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**   Executes SQL statement&#46; Use this function for non-queries,
-	UPDATE, INSERT, DELETE, CREATE&#46;
+  /**   Executes SQL statement. Use this function for non-queries,
+	UPDATE, INSERT, DELETE, CREATE, REINDEX, etc.
+	Note that autocommit is normally true so there is no
+	need to call commit() directly.
   */
   public static boolean execute(Connection dbcon,String sql)
       throws SQLException
@@ -71,7 +73,7 @@ public class pg_utils
     return ok;
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Return PostgreSQL connection&#46;
+  /**	Return PostgreSQL connection.
   */
   public static Connection dbConnect(String dbhost,Integer dbport,String dbid,String dbusr,String dbpw)
     throws SQLException
@@ -81,4 +83,15 @@ public class pg_utils
     return dbcon;
   }
   /////////////////////////////////////////////////////////////////////////////
+  /**	Encodes special chars as follows:
+	\ 	---to---	'||E'\\'||'
+  */
+  public static String QuoteString(String str)
+  {
+    // This is ugly in Java because backslashes are parsed by javac and then by
+    // the regex engine, so 4 become 1 and 8 become 2!
+    String str2=str.replaceAll("\\\\","'||E'\\\\\\\\'||'");
+    //if (!str2.equals(str)) System.err.println("DEBUG: pg_utils.QuoteString: \""+str+"\" -> \""+str2+"\"");
+    return str2;
+  }
 }
