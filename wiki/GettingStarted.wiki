@@ -143,7 +143,7 @@ Ant should work to compile the source code using the following build.xml file.  
 {{{
   $ mkdir {builddir}
   $ cd {builddir}
-  $ jar xf unm_biocomp_hscaf.jar
+  $ jar xf unm_biocomp_hscaf_distro.jar
   $ cp {downloaddir}/build.xml .
   $ ant
 }}}
@@ -167,21 +167,26 @@ build.xml:
   <property name="libberkeleydb" location="/home/app/lib/berkeleydb.jar" />
   <property name="libpgsql" location="/home/app/lib/postgresql-8.3-607.jdbc3.jar" />
 
-  <target name="libhscaf" >
+  <target name="hscaf_lib" >
     <javac
   srcdir="${basedir}/edu/unm/health/biocomp/hscaf" includes="*.java"
  classpath="${basedir};${basedir}/edu/unm/health/biocomp/hscaf;${libjchem};${libberkeleydb}" / >
-<javac
+    <javac
   srcdir="${basedir}/edu/unm/health/biocomp/db" includes="*.java"
- classpath="${basedir};${basedir}/edu/unm/health/biocomp/db;${libjchem};${libpgsql}" / >
-<javac
+ classpath="${basedir};${basedir}/edu/unm/health/biocomp/db;${libpgsql}" / >
+    <javac
   srcdir="${basedir}/edu/unm/health/biocomp/util" includes="*.java"
- classpath="${basedir};${basedir}/edu/unm/health/biocomp/util;${libjchem}" / >
+ classpath="${basedir};${basedir}/edu/unm/health/biocomp/util" / >
+    <javac
+  srcdir="${basedir}/edu/unm/health/biocomp/http" includes="*.java"
+ classpath="${basedir};${basedir}/edu/unm/health/biocomp/http" / >
 
     <jar destfile="${basedir}/unm_biocomp_hscaf_distro.jar" >
       <fileset dir="${basedir}" includes="edu/unm/health/biocomp/hscaf/*.class" />
       <fileset dir="${basedir}" includes="edu/unm/health/biocomp/db/*.class" />
       <fileset dir="${basedir}" includes="edu/unm/health/biocomp/util/*.class" />
+      <fileset dir="${basedir}" includes="edu/unm/health/biocomp/http/*.class" />
+
     </jar>
   </target>
 
