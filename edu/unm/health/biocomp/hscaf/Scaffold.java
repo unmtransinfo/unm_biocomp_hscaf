@@ -9,17 +9,17 @@ import chemaxon.sss.search.*;
 import chemaxon.marvin.io.MolExportException;
  
 /**	Represents any single HierS scaffold, which may contain zero,
-	or two or more child scaffolds&#46;  A scaffold with zero child
-	scaffolds is called a leaf scaffold&#46;  Each scaffold has a unique
-	set of child scaffolds&#46;  However, a scaffold may have multiple
+	or two or more child scaffolds.  A scaffold with zero child
+	scaffolds is called a leaf scaffold.  Each scaffold has a unique
+	set of child scaffolds.  However, a scaffold may have multiple
 	parent scaffolds, in a scaffold tree context or a scaffold
 	database context, since the same scaffold may be present in
-	multiple locations within one molecule or multiple molecules&#46;
+	multiple locations within one molecule or multiple molecules.
 	The largest scaffold of a molecule is the root scaffold
-	(a&#46;k&#46;a&#46; the Bemis-Murko framework)&#46;  For a single molecule
+	(a.k.a. the Bemis-Murko framework).  For a single molecule
 	a related set of Scaffold objects represents the HierS
-	scaffold hierarchy; similarly a scaffold hierarchy can be defined for a database&#46;
-	Scaffolds are by default non-stereo but may be stereo&#46;
+	scaffold hierarchy; similarly a scaffold hierarchy can be defined for a database.
+	Scaffolds are by default non-stereo but may be stereo.
 	<br />
 	@see edu.unm.health.biocomp.hscaf.Linker
 	@see edu.unm.health.biocomp.hscaf.Sidechain
@@ -31,12 +31,12 @@ import chemaxon.marvin.io.MolExportException;
 */
 public class Scaffold extends Molecule implements Comparable<Object>
 {
-  /** JChem format used for getCansmi() , for canonical scaffold smiles&#46;
-      E&#46;g&#46; cansmi=MolExporter.exportToFormat(mol,Scaffold.CANSMIFMT)
+  /** JChem format used for getCansmi() , for canonical scaffold smiles.
+      E.g. cansmi=MolExporter.exportToFormat(mol,Scaffold.CANSMIFMT)
   */
   public static final String CANSMIFMT="cxsmiles:u-L-l-e-d-D-p-R-f-w-H+a_gen+0";
-  /** JChem format used for getCansmi() , for canonical scaffold smiles&#46;
-      E&#46;g&#46; cansmi=MolExporter.exportToFormat(mol,Scaffold.CANSMIFMT_STEREO)
+  /** JChem format used for getCansmi() , for canonical scaffold smiles.
+      E.g. cansmi=MolExporter.exportToFormat(mol,Scaffold.CANSMIFMT_STEREO)
   */
   public static final String CANSMIFMT_STEREO="cxsmiles:u-L-l-e-d-D-p-R-f-w-H+a_gen";
   /** JChem format used for getSmi() */
@@ -61,8 +61,8 @@ public class Scaffold extends Molecule implements Comparable<Object>
   private Scaffold() {} //disallow default constructor
   /////////////////////////////////////////////////////////////////////////////
   /**	When initialized from a molecule, sidechains are removed
-	and explicit hydrogens are added at each junction bond&#46;
-	If molecule has no rings, return empty scaffold&#46;
+	and explicit hydrogens are added at each junction bond.
+	If molecule has no rings, return empty scaffold.
   */
   public Scaffold(Molecule mol,boolean stereo,boolean keep_nitro_attachments)
     throws MolFormatException
@@ -95,7 +95,7 @@ public class Scaffold extends Molecule implements Comparable<Object>
       (new Molecule()).clonecopy(this); //empty molecule
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**   Initialized molecule from smiles and call usual constructor&#46;
+  /**   Initialized molecule from smiles and call usual constructor.
   */
   public Scaffold(String smiles,Boolean stereo,Boolean keep_nitro_attachments)
     throws MolFormatException
@@ -105,7 +105,7 @@ public class Scaffold extends Molecule implements Comparable<Object>
     catch (MolFormatException e) { } // should not happen!
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Copy constructor&#46;
+  /**	Copy constructor.
   */
   public Scaffold(Scaffold scaf)
   {
@@ -117,7 +117,7 @@ public class Scaffold extends Molecule implements Comparable<Object>
     this.id=scaf.id;
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	For sorting by size&#46;
+  /**	For sorting by size.
   */
   public int compareTo(Object o) throws ClassCastException
   {
@@ -136,9 +136,9 @@ public class Scaffold extends Molecule implements Comparable<Object>
     return (this.getCansmi().equals(scaf2.getCansmi()));
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Reject (1) benzene, and (2) empty scaffolds &#46;
+  /**	Reject (1) benzene, and (2) empty scaffolds .
 	Note that benzene is identified by canonical smiles, unfortunately 
-	hard-coded&#46;
+	hard-coded.
   */
   public boolean isLegal()
   {
@@ -149,7 +149,7 @@ public class Scaffold extends Molecule implements Comparable<Object>
     return true;
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Adds child scaffold if new and legal&#46;
+  /**	Adds child scaffold if new and legal.
   */
   public boolean addChild(Scaffold scaf2)
   {
@@ -187,8 +187,8 @@ public class Scaffold extends Molecule implements Comparable<Object>
   */
   public void setID(long id2) { this.id=id2; }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Get canonical SMILES for this scaffold (as used for equality comparison)&#46;
-	Canonical SMILES are generated using JChem format Scaffold.CANSMIFMT&#46;
+  /**	Get canonical SMILES for this scaffold (as used for equality comparison).
+	Canonical SMILES are generated using JChem format Scaffold.CANSMIFMT.
 	Lazy evaluation.
   */
   public String getCansmi()
@@ -202,9 +202,9 @@ public class Scaffold extends Molecule implements Comparable<Object>
     return this.cansmi;
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Get Kekule SMILES for this scaffold&#46;  Recommended for export
+  /**	Get Kekule SMILES for this scaffold.  Recommended for export
 	as resulting SMILES will be more universally compatible with
-	other software&#46; Lazy evaluation&#46;
+	other software. Lazy evaluation.
   */
   public String getSmi()
   {
@@ -218,9 +218,9 @@ public class Scaffold extends Molecule implements Comparable<Object>
     return this.smi;
   }
   ///////////////////////////////////////////////////////////////////////////
-  /**	Get SMILES for this scaffold with junction atoms as pseudo-atoms&#46;
-	Note this is in ChemAxon cxsmiles format e&#46;g&#46;
-	"*C1CC1* |$p_J;;;;p_J$|"&#46;
+  /**	Get SMILES for this scaffold with junction atoms as pseudo-atoms.
+	Note this is in ChemAxon cxsmiles format e.g.
+	"*C1CC1* |$p_J;;;;p_J$|".
   */
   public String getJsmi()
   {
@@ -234,19 +234,19 @@ public class Scaffold extends Molecule implements Comparable<Object>
     return jsmi;
   }
   ///////////////////////////////////////////////////////////////////////////
-  /**	This recursive algorithm finds all child scafs&#46;  For each junction bond,
+  /**	This recursive algorithm finds all child scafs.  For each junction bond,
 	copy scaffold and cut bond, resulting in two parts which may be valid
 	scaffolds (sidechains have been deleted, but one part may comprise
-	invalid scaffold benzene)&#46; Special case is junction bonds to hydrogens,
-	which denote attachment points&#46; Then recurse and find grandchild scaffolds
-	for each child scafs&#46;  For simple 2-way linkers it is redundant to cut both
+	invalid scaffold benzene). Special case is junction bonds to hydrogens,
+	which denote attachment points. Then recurse and find grandchild scaffolds
+	for each child scafs.  For simple 2-way linkers it is redundant to cut both
 	junctions of a linker, but for (3+)-way linkers this allows enumeration of all
-	combinations&#46;  For each scaffold found, if unique (via canonical smiles),
-	add new child and specify its parentage&#46; If no junction bonds exist,
+	combinations.  For each scaffold found, if unique (via canonical smiles),
+	add new child and specify its parentage. If no junction bonds exist,
 	findChildScaffolds() returns null, recursion terminates, and the current
-	scaffold is a leaf&#46;
+	scaffold is a leaf.
 	<br />
-	This method does the heavy-lifting&#46;
+	This method does the heavy-lifting.
   */
   public int findChildScaffolds()
     throws SearchException,MolFormatException
@@ -332,7 +332,7 @@ public class Scaffold extends Molecule implements Comparable<Object>
   }
   ///////////////////////////////////////////////////////////////////////////
   /**	Search for child scaffold equal to the specified scaffold; if not
-	found return null&#46;
+	found return null.
   */
   public Scaffold findChildScaffold(Scaffold scaf)
   {
@@ -345,8 +345,8 @@ public class Scaffold extends Molecule implements Comparable<Object>
   }
   ///////////////////////////////////////////////////////////////////////////
   /**   Generates string representing the hierarchical scaffold sub tree
-	rooted by this scaffold&#46;
-        e&#46;g&#46; "1:(2,3)" or "1:(2:(3,4,5),6:(4,7))"
+	rooted by this scaffold.
+        e.g. "1:(2,3)" or "1:(2:(3,4,5),6:(4,7))"
   */
   public String subTreeAsString()
   {
@@ -367,8 +367,8 @@ public class Scaffold extends Molecule implements Comparable<Object>
     return str;
   }
   ///////////////////////////////////////////////////////////////////////////
-  /**	For storage; delete molecule object and retain canonical SMILES&#46;
-  	Canonical SMILES used since it is an identifier&#46;
+  /**	For storage; delete molecule object and retain canonical SMILES.
+  	Canonical SMILES used since it is an identifier.
   */
   public void compress()
   {
@@ -378,7 +378,7 @@ public class Scaffold extends Molecule implements Comparable<Object>
     if (!this.isEmpty()) this.clear();
   }
   ///////////////////////////////////////////////////////////////////////////
-  /**	Reconstruct molecule object from stored canonical SMILES&#46;
+  /**	Reconstruct molecule object from stored canonical SMILES.
   */
   public void decompress()
   {

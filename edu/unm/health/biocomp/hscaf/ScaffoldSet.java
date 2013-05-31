@@ -8,19 +8,19 @@ import chemaxon.struc.*;
 import chemaxon.sss.search.*;
 import chemaxon.marvin.io.MolExportException;
  
-/**	Represents a set of unique HierS scaffolds &#46;  Purpose of this class is
+/**	Represents a set of unique HierS scaffolds .  Purpose of this class is
 	to 
 	<OL>
-	<LI> Store set of scaffolds, compactly, generated for input molecular dataset, for output &#46;
-	<LI> Optimize generation of scaffolds by avoiding repitition of prior analyses&#46;
+	<LI> Store set of scaffolds, compactly, generated for input molecular dataset, for output .
+	<LI> Optimize generation of scaffolds by avoiding repitition of prior analyses.
 	</OL>
-	IDs are consecutive and start at 1&#46;
-	Child scaffolds are not separate instances but rather among the set and may be shared&#46;
+	IDs are consecutive and start at 1.
+	Child scaffolds are not separate instances but rather among the set and may be shared.
 	Developer note: scafhash and idhash contain references to the same Scaffold objects, 
-	thereby conserving memory&#46;
+	thereby conserving memory.
 	<br />
 	Note that the ScaffoldStore class is an alternative utilizing BerkeleyDB for
-	improved performance and memory management for large datasets&#46;
+	improved performance and memory management for large datasets.
 	<br />
 	@see edu.unm.health.biocomp.hscaf.Scaffold
 	@see edu.unm.health.biocomp.hscaf.ScaffoldTree
@@ -35,7 +35,7 @@ public class ScaffoldSet
   private HashMap<String,Scaffold> scafhash;
   private HashMap<Long,Scaffold> idhash;
   /////////////////////////////////////////////////////////////////////////////
-  /**	Default constructor&#46;
+  /**	Default constructor.
   */
   public ScaffoldSet()
   {
@@ -44,7 +44,7 @@ public class ScaffoldSet
     this.idhash = new HashMap<Long,Scaffold>();
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Constructor with name&#46;
+  /**	Constructor with name.
   */
   public ScaffoldSet(String name)
   {
@@ -53,18 +53,18 @@ public class ScaffoldSet
     this.idhash = new HashMap<Long,Scaffold>();
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Return number of Scaffolds in ScaffoldSet&#46;
+  /**	Return number of Scaffolds in ScaffoldSet.
   */
   public long getCount() { return this.scafhash.size(); }
   /////////////////////////////////////////////////////////////////////////////
-  /**	True if Scaffold present with same cansmi&#46;
+  /**	True if Scaffold present with same cansmi.
   */
   public boolean containsScaffold(Scaffold scaf)
   {
     return (this.scafhash.containsKey(scaf.getCansmi()));
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Returns ID of Scaffold with same cansmi if present, null otherwise&#46;
+  /**	Returns ID of Scaffold with same cansmi if present, null otherwise.
   */
   public Long getScaffoldID(Scaffold scaf)
   {
@@ -72,14 +72,14 @@ public class ScaffoldSet
   }
   /////////////////////////////////////////////////////////////////////////////
   /**	Merges a complete [sub]ScaffoldTree defined by the Scaffold argument with the
-	ScaffoldSet&#46;  New scaffolds are assigned new IDs, which is the main purpose of
-	this method&#46; Existing scaffolds are recognized as such, should have IDs,
-	since found during hscaf_utils.findChildScaffolds&#46;
+	ScaffoldSet.  New scaffolds are assigned new IDs, which is the main purpose of
+	this method. Existing scaffolds are recognized as such, should have IDs,
+	since found during hscaf_utils.findChildScaffolds.
 	Initially called with new root scaffold, then
-	recursively&#46; For each call,
-	process all immediate child scaffolds, then recurse&#46;
-	Child scaffolds present in set are same instances, not only equal&#46;
-	Returns number of new scaffolds merged&#46;
+	recursively. For each call,
+	process all immediate child scaffolds, then recurse.
+	Child scaffolds present in set are same instances, not only equal.
+	Returns number of new scaffolds merged.
   */
   public int mergeScaffoldTree(Scaffold scaf)
   {
@@ -162,14 +162,14 @@ public class ScaffoldSet
     return n_new;
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Returns Set of cansmi strings&#46;
+  /**	Returns Set of cansmi strings.
   */
   public Set<String> keySet()
   {
     return this.scafhash.keySet();
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Add scaffold to ScaffoldSet, and compress&#46;
+  /**	Add scaffold to ScaffoldSet, and compress.
   */
   public void addScaffold(Scaffold scaf)
   {
@@ -191,7 +191,7 @@ public class ScaffoldSet
     return scaf;
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Return Scaffold with same cansmi, if present, otherwise null&#46;
+  /**	Return Scaffold with same cansmi, if present, otherwise null.
   */
   public Scaffold findScaffold(Scaffold scaf)
   {

@@ -19,15 +19,15 @@ import edu.unm.health.biocomp.util.*;
 /// to do: [ ] parallelize (threads, db locks, etc.) 
 /// to do: [ ] -out_link and -out_chain
 
-/**	HierS hierarchical scaffolds application&#46;  Run program with
-	no args for command-line help&#46;
+/**	HierS hierarchical scaffolds application.  Run program with
+	no args for command-line help.
 	<br />
 	For each molecule in the input dataset, scaffolds are perceived, including the hierarchical
 	scaffold tree, and a set of unique scaffolds for the dataset is generated, with IDs assigned
-	sequentially&#46;
-	The output molecule file is annotated with scaffold IDs&#46;
+	sequentially.
+	The output molecule file is annotated with scaffold IDs.
 	The output scaffold file is annotated with scaffold IDs and scaffold hierarchy tree
-	(encoded as string).&#46;
+	(encoded as string)..
 	<br />
 	@author Jeremy J Yang
 	@see edu.unm.health.biocomp.hscaf.ScaffoldTree
@@ -68,7 +68,7 @@ public class hier_scaffolds
   private static Boolean rdb_resume=false;
   private static Boolean rdb_predelete=false;
   private static String rdb_dump=null;
-  private static String rdb_host="localhost";
+  private static String rdb_host=null;
   private static Integer rdb_port=5432; //PGSql default
   private static String rdb_name=null;
   private static String rdb_schema="public";
@@ -81,6 +81,7 @@ public class hier_scaffolds
   private static int maxrings=10;
   private static int nmax=0;
   private static int nskip=0;
+  //private static String db_preload=null;
   private static String smifmt="cxsmiles:u-L-l-e-d-D-p-R-f-w";
   private static String bdb_dir="/tmp/hscaf";
 
@@ -142,6 +143,7 @@ public class hier_scaffolds
       +"    -show_js .................. show junctions (as pseudoatoms) -- for debugging, visualizing\n"
       +"    -nmax NMAX ................ quit after NMAX molecules\n"
       +"    -nskip NSKIP .............. skip NSKIP molecules\n"
+      //+"    -db_preload SCAFS ......... preload db from scaffold file for incremental analysis\n"
       +"    -v ........................ verbose\n"
       +"    -vv ....................... very verbose\n"
       +"    -vvv or -debug ............ very very verbose (slows process)\n"
@@ -194,6 +196,7 @@ public class hier_scaffolds
 
       else if (args[i].equals("-nmax")) nmax=Integer.parseInt(args[++i]);
       else if (args[i].equals("-nskip")) nskip=Integer.parseInt(args[++i]);
+      //else if (args[i].equals("-db_preload")) db_preload=args[++i];
       else if (args[i].equals("-v")) verbose=1;
       else if (args[i].equals("-vv")) verbose=2;
       else if (args[i].equals("-vvv") || args[i].equals("-debug")) verbose=3;
@@ -242,7 +245,7 @@ public class hier_scaffolds
                 stereo,keep_nitro_attachments,false);
         File fout = new File(rdb_dump);
         long nscaf = scafdb.dumpToFile(fout,verbose);
-        System.err.println("Scaffold DB: "+rdb_host+" dumped: "+rdb_dump);
+        System.err.println("Scaffold DB: "+rdb_host+":"+rdb_port+"/"+rdb_name+" dumped: "+rdb_dump);
       }
       catch (SQLException e) {
         System.err.println("SQLException: "+e.getMessage());
@@ -257,13 +260,24 @@ public class hier_scaffolds
       help("ERROR: -bdb_resume and -bdb_predelete incompatible.");
     if (bdb_resume && !bdb)
       help("ERROR: -bdb_resume requires -bdb.");
+    if ((bdb_resume||bdb_keep||bdb_predelete) && !bdb)
+      help("ERROR: -bdb_resume|-bdb_keep|-bdb_predelete require -bdb.");
     if (rdb_resume && rdb_predelete)
       help("ERROR: -rdb_resume and -rdb_predelete incompatible.");
     if (rdb_resume && !rdb)
       help("ERROR: -rdb_resume requires -rdb.");
-
+    if ((rdb_host!=null ||rdb_name!=null) && !rdb)
+      help("ERROR: -rdb_host|-rdb_name require -rdb.");
+    if ((rdb_user!=null ||rdb_pw!=null) && !rdb)
+      help("ERROR: -rdb_user|-rdb_pw require -rdb.");
+    if ((rdb_resume||rdb_keep||rdb_predelete) && !rdb)
+      help("ERROR: -rdb_resume|-rdb_keep|-rdb_predelete require -rdb.");
     if (append2ofile && !bdb_resume && !rdb_resume)
       help("ERROR: -append2ofile requires -bdb_resume or -rdb_resume.");
+    //if (db_preload!=null && !rdb && !bdb)
+    //  help("ERROR: -db_preload requires -rdb or -bdb.");
+    //if (db_preload!=null && (rdb_resume || bdb_resume))
+    //  help("ERROR: -db_preload incompatible w/ -rdb_resume, -bdb_resume.");
 
     if (!(new File(ifile).exists())) help("Non-existent input file: "+ifile);
     MolImporter molReader = new MolImporter(ifile);
@@ -366,6 +380,8 @@ public class hier_scaffolds
           }
           scafdb = new ScaffoldDB(rdb_host,rdb_port,rdb_name,rdb_schema,rdb_user,rdb_pw,rdb_tableprefix,
             stereo,keep_nitro_attachments,true);
+          if (verbose>0)
+            System.err.println("Scaffold DB created: "+rdb_host+":"+rdb_port+"/"+rdb_name+" (tableprefix: \""+rdb_tableprefix+"\")");
         }
         if (scafdb==null || !scafdb.checkValid()) help("ERROR: scafdb initialization failed.");
 
@@ -390,6 +406,8 @@ public class hier_scaffolds
     ScaffoldSet scafset = null;
     if (!bdb && !rdb)
     {
+      if (verbose>0)
+        System.err.println("NOTE: No persistent scaffold database used.  Slower for large datasets.");
       scafset = new ScaffoldSet("scaffold set from: "+ifile);
     }
 

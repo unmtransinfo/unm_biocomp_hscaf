@@ -9,11 +9,11 @@ import chemaxon.sss.search.*;
 import chemaxon.struc.*;
 import chemaxon.marvin.io.MolExportException;
 
-/**	HierS hierarchical scaffolds application for max common scaffold search&#46; 
-	Run program with no args for command-line help&#46;
-	Query input file is one molecule&#46;  Query is compared with each molecule from dataset input file,
-	and common scaffolds are written to output&#46;  Also the scaffold-based Tanimoto similarity
-	value is computed&#46;
+/**	HierS hierarchical scaffolds application for max common scaffold search. 
+	Run program with no args for command-line help.
+	Query input file is one molecule.  Query is compared with each molecule from dataset input file,
+	and common scaffolds are written to output.  Also the scaffold-based Tanimoto similarity
+	value is computed.
 	<br />
 	@author Jeremy J Yang
 	@see edu.unm.health.biocomp.hscaf.ScaffoldTree

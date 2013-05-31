@@ -14,8 +14,8 @@ import chemaxon.calculations.TopologyAnalyser;
 
 import com.sleepycat.je.DatabaseException;
  
-/**	Contains internal static functions used in hierarchical scaffold analysis&#46; 
-	Not normally recommended for use by applications&#46;
+/**	Contains internal static functions used in hierarchical scaffold analysis. 
+	Not normally recommended for use by applications.
 	<br />
 	@see edu.unm.health.biocomp.hscaf.Linker
 	@see edu.unm.health.biocomp.hscaf.ScaffoldTree
@@ -51,21 +51,21 @@ public class hscaf_utils
     return findChildScaffolds(scaf,null,null,scafdb);
   }
   ///////////////////////////////////////////////////////////////////////////
-  /**   This recursive algorithm finds all child scaffolds&#46;  For each junction bond,
+  /**   This recursive algorithm finds all child scaffolds.  For each junction bond,
         copy scaffold and cut bond, resulting in two parts which may be valid
         scaffolds (sidechains have been deleted, but one part may comprise
-        invalid scaffold benzene)&#46; Special case is junction bonds to hydrogens,
-        which denote attachment points&#46; Then recurse and find grandchild scaffolds
-        for each child scaffold&#46;  For simple 2-way linkers it is redundant to cut both
+        invalid scaffold benzene). Special case is junction bonds to hydrogens,
+        which denote attachment points. Then recurse and find grandchild scaffolds
+        for each child scaffold.  For simple 2-way linkers it is redundant to cut both
         junctions of a linker, but for (3+)-way linkers this allows enumeration of all
-        combinations&#46;  For each scaffold found, if unique (via canonical smiles),
-        add new child and specify its parentage&#46; If no junction bonds exist,
+        combinations.  For each scaffold found, if unique (via canonical smiles),
+        add new child and specify its parentage. If no junction bonds exist,
         findChildScaffolds() returns null, recursion terminates, and the current
-        scaffold is a leaf&#46; The heavy-lifting goes through this method&#46;
+        scaffold is a leaf. The heavy-lifting goes through this method.
 	ScaffoldSet and ScaffoldStore store known scaffolds to avoid costly
-	re-analysis&#46;  With ScaffoldSet, if scaffold already known, use
-	existing scaffold object, not new child candidate object&#46;  With
-	ScaffoldStore, new object must be used&#46;
+	re-analysis.  With ScaffoldSet, if scaffold already known, use
+	existing scaffold object, not new child candidate object.  With
+	ScaffoldStore, new object must be used.
   */
   public static int findChildScaffolds(Scaffold scaf,ScaffoldSet scafset,ScaffoldStore scafstore,ScaffoldDB scafdb)
     throws SearchException,MolFormatException,DatabaseException,SQLException,IOException
@@ -151,7 +151,7 @@ public class hscaf_utils
   }
   /////////////////////////////////////////////////////////////////////////////
   /**   Re-create Scaffold and all offspring as stored for use as sub-tree,
-        etc&#46;
+        etc.
   */
   public static Scaffold entity2Scaffold(ScaffoldStore scafstore,ScaffoldEntity scent)
         throws MolFormatException,DatabaseException
@@ -169,8 +169,8 @@ public class hscaf_utils
   }
   /////////////////////////////////////////////////////////////////////////////
   /**	Tag junction bonds joining scafs, linkers and sidechains, using 
-	MolBond.setSetseq()&#46;  Set to unique connection ID &gt;1&#46;  
-	Not tagged are junctions connecting linkers and sidechains&#46;
+	MolBond.setSetseq().  Set to unique connection ID &gt;1.  
+	Not tagged are junctions connecting linkers and sidechains.
 	@param mol molecule to be tagged
 	@param keep_nitro_attachments true for N-attachments scaf definition
 	@return all junction bond indexes
@@ -228,17 +228,17 @@ public class hscaf_utils
     return jbonds;
   }
   ///////////////////////////////////////////////////////////////////////////
-  /**	Remove side chains leaving only scaffold&#46;
-	Removes, iteratively, terminal atom by terminal atom&#46;
+  /**	Remove side chains leaving only scaffold.
+	Removes, iteratively, terminal atom by terminal atom.
 	Scaffolds and linkers should include atoms multiply-bonded to the scaffold
-	or linker&#46;  
+	or linker.  
 	Arguably the algorithm used here involving smarts is a kludge, and
 	should simply rely on the junction bonds and atoms to figure out
-	which atoms to remove&#46;  However, I currently do not see how
+	which atoms to remove.  However, I currently do not see how
 	to do that, since, for example, a given atom might need removal
 	if part of a "dangling" linker, but not if the linker is involved
-	in the scaffold&#46;  Maybe the tagJunctions() method should also
-	annotate all atoms as scaffold, linker or sidechain&#46;
+	in the scaffold.  Maybe the tagJunctions() method should also
+	annotate all atoms as scaffold, linker or sidechain.
 	@param mol input molecule or scaffold
 	@param keep_nitro_attachments true for N-attachments scaf definition
 	@return number of atoms removed
@@ -344,7 +344,7 @@ public class hscaf_utils
     return n_del;
   }
   ///////////////////////////////////////////////////////////////////////////
-  /**	Replaces junction hydrogens with junction pseudo atoms (labeled "J") &#46;
+  /**	Replaces junction hydrogens with junction pseudo atoms (labeled "J") .
 	@param mol input molecule
 	@return number of junction hydrogens replaced
   */
@@ -369,7 +369,7 @@ public class hscaf_utils
     return n_j;
   }
   ///////////////////////////////////////////////////////////////////////////
-  /**	Replaces junction pseudo atoms (labeled "J") with junction hydrogens &#46;
+  /**	Replaces junction pseudo atoms (labeled "J") with junction hydrogens .
 	@param mol input molecule
 	@return number of junction pseudo atoms replaced
   */
@@ -395,12 +395,12 @@ public class hscaf_utils
   /////////////////////////////////////////////////////////////////////////////
   /**	*****************EXPERIMENTAL*****************
 	Called after tagJunctions, tags every atom identifying it as
-	scaffold, linker, or sidechain&#46;  Note that sidechains may be
-	joined to scaffolds or linkers&#46;
+	scaffold, linker, or sidechain.  Note that sidechains may be
+	joined to scaffolds or linkers.
 	<br />
 	Contains experimental code in development not
 	yet utilized, eventually to improve efficiency and reduce 
-	reliance on smarts patterns&#46;
+	reliance on smarts patterns.
 	@param mol molecule to be tagged
 	@param jbonds junction bond list from tagJunctions()
   */
@@ -457,11 +457,11 @@ public class hscaf_utils
     }
   }
   /**	From specified atom, depth first graph search terminating
-	at junction bonds and tag all atoms&#46;  Also  terminate at
-	atoms already tagged&#46;
+	at junction bonds and tag all atoms.  Also  terminate at
+	atoms already tagged.
 	<br />
 	Contains experimental code in development not
-	yet utilized&#46;
+	yet utilized.
   */
   private static int tagRole(MolAtom atom,String tag)
   {

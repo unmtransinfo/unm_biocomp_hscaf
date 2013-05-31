@@ -6,25 +6,25 @@ import chemaxon.struc.MoleculeGraph;
 
 /**
  * The <code>ShortestPath</code> class calculates and stores the length 
- * of shortest paths between any two nodes of a molecular graph&#46; The 
- * implementation is based on the Floyd-Warshall algorithm&#46;
+ * of shortest paths between any two nodes of a molecular graph. The 
+ * implementation is based on the Floyd-Warshall algorithm.
  * One instance of <code>ShortestPath</code> can be reused to compute distances 
  * for several chemical graphs, this serves the more efficient storage space 
- * usage&#46; Internal structures are grown dynamically when a molecular structure 
+ * usage. Internal structures are grown dynamically when a molecular structure 
  * larger than any previous one is given as input for the shortest path 
- * calculation&#46; (Author:  Miklos Vargyas, ChemAxon)
+ * calculation. (Author:  Miklos Vargyas, ChemAxon)
  * <p>
  * <i> Example of typical usage: </i>
  * <pre>
  * ShortestPath sp();   
- * &#46;&#46;&#46;
+ * ...
  * MoleculeGraph mg = get the first molecular graph
- * while ( &#46;&#46;&#46;  there are more molecular graphs &#46;&#46;&#46; ) {
- *   sp&#46;calculate( mg );
- *   for ( int i = 1; i &lt; mg&#46;getAtomCount(); ++i ) {
+ * while ( ...  there are more molecular graphs ... ) {
+ *   sp.calculate( mg );
+ *   for ( int i = 1; i &lt; mg.getAtomCount(); ++i ) {
  *     for ( int j = 0; j &lt; i; ++j ) {
- *       System&#46;out&#46;println( "The length of the shortest path between nodes " +
- *                           i + " and " + j " is " sp&#46;minDist( i, j ) );
+ *       System.out.println( "The length of the shortest path between nodes " +
+ *                           i + " and " + j " is " sp.minDist( i, j ) );
  *     }
  *   }
  *   mg = get next molecular graph
@@ -32,14 +32,14 @@ import chemaxon.struc.MoleculeGraph;
  * </pre>
  *
  * In its current implementation the edges of the graph are unweighted (that is 
- * all weights are equal to 1)&#46; This can easily be changed if needed later&#46; 
+ * all weights are equal to 1). This can easily be changed if needed later. 
  *
 	<blockquote>
  	<b>NOTE:</b> This code, downloaded from the ChemAxon forum, has been slightly revised
-	to comply with the newer JChem 5&#46;4&#46;0 API&#46;  CGraph has been replaced by MoleculeGraph&#46;
-	However, although MoleculeGraph&#46;getBondTable() is recommended, this
+	to comply with the newer JChem 5.4.0 API.  CGraph has been replaced by MoleculeGraph.
+	However, although MoleculeGraph.getBondTable() is recommended, this
 	chemaxon.util.BondTable is not documented and it is not clear how to
-	access the values, so MoleculeGraph&#46;getBtab() is still used&#46;
+	access the values, so MoleculeGraph.getBtab() is still used.
 	<br>
 	<i>(Jeremy Yang, 25 Feb 2011)</i>
 	</blockquote>

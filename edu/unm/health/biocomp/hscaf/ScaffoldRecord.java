@@ -4,8 +4,8 @@ import java.util.*;
 
 import edu.unm.health.biocomp.db.*;
 
-/**	Represents scaffold record used for storage in ScaffoldDB&#46;
-	Normally comprised of data from tables "scaffold" and "scaf2scaf"&#46;
+/**	Represents scaffold record used for storage in ScaffoldDB.
+	Normally comprised of data from tables "scaffold" and "scaf2scaf".
         <br />
 	@see ScaffoldDB
 	@author Jeremy J Yang

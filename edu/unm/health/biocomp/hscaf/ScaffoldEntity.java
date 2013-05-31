@@ -5,11 +5,11 @@ import java.util.*;
 import com.sleepycat.persist.model.*;
 import static com.sleepycat.persist.model.Relationship.*;
 
-/**	Scaffold entity used for storage in BerkeleyDB-based ScaffoldStore&#46;
+/**	Scaffold entity used for storage in BerkeleyDB-based ScaffoldStore.
         <br />
 	Developer note: Auto-sequencing did not work correctly for cases where a database
-	was re-opened, which resulted in skipping ahead (to nearest largest multiple of 100)&#46;
-	So scaffold IDs are manually assigned 1 + count()&#46;
+	was re-opened, which resulted in skipping ahead (to nearest largest multiple of 100).
+	So scaffold IDs are manually assigned 1 + count().
         <br />
 	@see ScaffoldStore
 	@author Jeremy J Yang

@@ -29,7 +29,7 @@ public class Sidechain extends Molecule
   private Sidechain() {} //disallow default constructor
   /////////////////////////////////////////////////////////////////////////////
   /**	When initialized from a molecule, sidechains are removed
-	and junction pseudo atoms remain at each junction bond&#46;
+	and junction pseudo atoms remain at each junction bond.
   */
   public Sidechain(Molecule mol)
     throws MolFormatException,MolExportException,SearchException,IOException
@@ -61,9 +61,9 @@ public class Sidechain extends Molecule
   */
   public String getSmi() { return this.smi; }
   ///////////////////////////////////////////////////////////////////////////
-  /**	Get SMILES for this sidechain with junction atoms as pseudo-atoms&#46;
-	Note this is in ChemAxon cxsmiles format e&#46;g&#46;
-	"*CCC |$p_J;;;|"&#46;
+  /**	Get SMILES for this sidechain with junction atoms as pseudo-atoms.
+	Note this is in ChemAxon cxsmiles format e.g.
+	"*CCC |$p_J;;;|".
   */
   public String getJsmi()
     throws MolExportException,IOException

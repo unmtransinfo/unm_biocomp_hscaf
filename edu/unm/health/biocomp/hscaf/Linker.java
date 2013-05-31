@@ -31,7 +31,7 @@ public class Linker extends Molecule
   private Linker() {} //disallow default constructor
   /////////////////////////////////////////////////////////////////////////////
   /**	When initialized from a molecule, sidechains are removed
-	and junction pseudo atoms remain at each junction bond&#46;
+	and junction pseudo atoms remain at each junction bond.
   */
   public Linker(Molecule mol)
     throws MolFormatException,SearchException,MolExportException,IOException
@@ -68,9 +68,9 @@ public class Linker extends Molecule
   */
   public String getSmi() { return this.smi; }
   ///////////////////////////////////////////////////////////////////////////
-  /**	Get SMILES for this linker with junction atoms as pseudo-atoms&#46;
-	Note this is in ChemAxon cxsmiles format e&#46;g&#46;
-	"*CCC* |$p_J;;;;p_J$|"&#46;
+  /**	Get SMILES for this linker with junction atoms as pseudo-atoms.
+	Note this is in ChemAxon cxsmiles format e.g.
+	"*CCC* |$p_J;;;;p_J$|".
   */
   public String getJsmi()
     throws MolExportException,IOException
@@ -81,10 +81,10 @@ public class Linker extends Molecule
   }
   ///////////////////////////////////////////////////////////////////////////
   /**   Removes side-chains from linker, retains only shortest path and atoms multiply
-        bonded to shortest path&#46; Must avoid matching pseudo-atoms: "[*] |$p_J$|"&#46;
+        bonded to shortest path. Must avoid matching pseudo-atoms: "[*] |$p_J$|".
         (But cxsmarts cannot represent the negation of a pseudo-atom!?)
         Kludge: First attach "protecting ring" say *1**1 at each pseudoatom
-        to prevent deletion&#46;  Then run rmSideChains()&#46;  Then delete protecting ring&#46;
+        to prevent deletion.  Then run rmSideChains().  Then delete protecting ring.
   */
   private static int pruneLinker(Molecule mol)
     throws SearchException,MolFormatException,MolExportException

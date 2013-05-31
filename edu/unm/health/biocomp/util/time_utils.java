@@ -4,14 +4,14 @@ import java.io.*;
 import java.util.*;
 import java.text.*;
 
-/**	Static methods for time and date processing&#46;
+/**	Static methods for time and date processing.
 	@author Jeremy J Yang
 */
 public class time_utils
 {
   private time_utils() {} //disable default constructor
   /////////////////////////////////////////////////////////////////////////////
-  /**	Human readable time interval&#46;
+  /**	Human readable time interval.
   */
   public static String timeDeltaStr(java.util.Date t_i,java.util.Date t_f)
   {
@@ -27,7 +27,7 @@ public class time_utils
       return (String.format("%2ds",t_d_s));
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Time of day (00:00 - 23:59).&#46;
+  /**	Time of day (00:00 - 23:59)..
   */
   public static String currentTime()
   {

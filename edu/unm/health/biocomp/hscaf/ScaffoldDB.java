@@ -9,19 +9,19 @@ import edu.unm.health.biocomp.db.*;
 
 import chemaxon.formats.MolFormatException;
 
-/**	Provides persistent scaffold storage via standard RDB&#46;
+/**	Provides persistent scaffold storage via standard RDB.
 	For large jobs this avoids memory limits and improves performance by
-	storing solved scaffolds for rapid lookup and avoiding re-calculation&#46;
+	storing solved scaffolds for rapid lookup and avoiding re-calculation.
 	<br />
 	An additional benefit of DB usage is paralellization, since
 	separate processes can concurrently read and write to the same
-	scaffold database by locking and unlocking records&#46;
+	scaffold database by locking and unlocking records.
 	<br />
 	Minimal, standard RDB features required; no chemical cartridge used,
-	smiles canonicalization by client&#46;
+	smiles canonicalization by client.
 	<br />
-	PostgreSQL supported only&#46;  Maybe should use another layer to be database
-	agnostic (support MySql, etc)&#46;
+	PostgreSQL supported only.  Maybe should use another layer to be database
+	agnostic (support MySql, etc).
 	<br />
 	@author Jeremy J Yang
 	@see	ScaffoldRecord
@@ -62,12 +62,13 @@ public class ScaffoldDB
   public Connection getDBConnection() { return this.dbcon; }
 
   /////////////////////////////////////////////////////////////////////////////
-  /**	Constructor creates or opens existing database at location specified&#46;<br/>
+  /**	Constructor creates or opens existing database at location specified.<br/>
 	<p>
+	<code>CREATE SCHEMA IF NOT EXISTS <i>DBSCHEMA</i><br/>
 	Schema:<br />
 	<code>CREATE TABLE <i>DBSCHEMA.DBTABLEPREFIX</i>scaffold (<br/>
 	&nbsp;	id INTEGER PRIMARY KEY,<br/>
-	&nbsp;	scafsmi VARCHAR(512) UNIQUE NOT NULL,<br/>
+	&nbsp;	scafsmi VARCHAR(512) NOT NULL,<br/>
 	&nbsp;	scaftree VARCHAR(2048))<br/>
 	<br />
 	CREATE TABLE <i>DBSCHEMA.DBTABLEPREFIX</i>scaf2scaf (<br/>
@@ -120,8 +121,10 @@ public class ScaffoldDB
     ok=checkValid();
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Creates new database at location specified&#46;
-  	Schema should be "public" unless previously created manually&#46;
+  /**	Creates new database at location specified.
+	Scafsmi column intentionally not specified UNIQUE, to allow re-canonicalization
+	by database cartridge, which could result in collisions (unfortunate
+	but better than a fatal duplicate-key error).
   */
   private boolean createNewDB()
 	throws SQLException
@@ -129,28 +132,29 @@ public class ScaffoldDB
     boolean ok=true;
     String sql="";
 
+    this.dbcon.setAutoCommit(true);  //Should be true by default but let's be sure.
+
+    //sql="CREATE SCHEMA IF NOT EXISTS "+this.dbschema; //should work in PG 9.3
+    try {ok&=pg_utils.execute(this.dbcon,"CREATE SCHEMA "+this.dbschema);} catch (Exception e) {} //Ignore; assume schema exists
+
     sql="CREATE TABLE "+this.dbschema+"."+this.dbtableprefix+"scaffold"
-      +"(id INTEGER PRIMARY KEY,scafsmi VARCHAR(512) UNIQUE NOT NULL,scaftree VARCHAR(2048))";
+      +"(id INTEGER PRIMARY KEY,scafsmi VARCHAR(512) NOT NULL,scaftree VARCHAR(2048))";
     ok&=pg_utils.execute(this.dbcon,sql);
-    this.dbcon.commit();
 
     sql="CREATE TABLE "+this.dbschema+"."+this.dbtableprefix+"scaf2scaf"
       +"(parent_id INTEGER NOT NULL,child_id INTEGER NOT NULL)";
     ok&=pg_utils.execute(this.dbcon,sql);
-    this.dbcon.commit();
 
-    sql="CREATE INDEX scaffold_id_idx ON "+this.dbschema+"."+this.dbtableprefix+"scaffold (id)";
+    sql="CREATE INDEX "+this.dbtableprefix+"_scaffold_id_idx ON "+this.dbschema+"."+this.dbtableprefix+"scaffold (id)";
     ok&=pg_utils.execute(this.dbcon,sql);
-    this.dbcon.commit();
 
-    sql="CREATE INDEX scaf2scaf_parent_id_idx ON "+this.dbschema+"."+this.dbtableprefix+"scaf2scaf (parent_id)";
+    sql="CREATE INDEX "+this.dbtableprefix+"_scaf2scaf_parent_id_idx ON "+this.dbschema+"."+this.dbtableprefix+"scaf2scaf (parent_id)";
     ok&=pg_utils.execute(this.dbcon,sql);
-    this.dbcon.commit();
 
     return ok;
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Re-index modified tables periodically for faster response&#46;
+  /**	Re-index modified tables periodically for faster response.
   */
   public boolean reindex()
 	throws SQLException
@@ -165,7 +169,7 @@ public class ScaffoldDB
     return ok;
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Minimal sanity check whether DB exists, is accessible and valid schema&#46;
+  /**	Minimal sanity check whether DB exists, is accessible and valid schema.
   */
   public boolean checkValid()
 	throws SQLException
@@ -257,7 +261,7 @@ public class ScaffoldDB
     return getScaffoldByID(rset.getLong("id"));
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Check whether specified ID is in database&#46;
+  /**	Check whether specified ID is in database.
   */
   public boolean containsScaffoldByID(Long id)
 	throws SQLException
@@ -269,7 +273,7 @@ public class ScaffoldDB
     return ok;
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Check whether scaffold specified by smiles is in database&#46;
+  /**	Check whether scaffold specified by smiles is in database.
 	@param	smi	scaffold SMILES
   */
   public boolean containsScaffoldBySmiles(String smi)
@@ -279,7 +283,7 @@ public class ScaffoldDB
     return containsScaffoldByCansmi(cansmi);
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Check whether scaffold specified by canonical smiles is in database&#46;
+  /**	Check whether scaffold specified by canonical smiles is in database.
 	@param	cansmi	scaffold canonical SMILES
   */
   public boolean containsScaffoldByCansmi(String cansmi)
@@ -310,38 +314,37 @@ public class ScaffoldDB
     return id;
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Write {@link ScaffoldRecord} to database&#46;
-	Should assure scaffold not already known&#46;
+  /**	Write {@link ScaffoldRecord} to database.
+	Should assure scaffold not already known.
   */
   public boolean addScaffold(ScaffoldRecord scafrec)
 	throws SQLException
   {
     boolean ok=true;
+    this.dbcon.setAutoCommit(true);  //Should be true by default but let's be sure.
     String sql="INSERT INTO "+this.dbschema+"."+this.dbtableprefix+"scaffold (id,scafsmi,scaftree)"
 	+" VALUES ("+scafrec.getID()+",'"+scafrec.getCansmi()+"','"+getScaffoldString(scafrec)+"')";
     pg_utils.execute(this.dbcon,sql);
-    this.dbcon.commit();
     return ok;
   }
   /////////////////////////////////////////////////////////////////////////////
   /**	Update database with revised {@link ScaffoldRecord},
-	matched by ID&#46;
+	matched by ID.
   	@param scafrec	 revised {@link ScaffoldRecord} with pre-existing ID
   */
   public boolean updateScaffoldByID(ScaffoldRecord scafrec)
 	throws SQLException
   {
     boolean ok=true;
+    this.dbcon.setAutoCommit(true);  //Should be true by default but let's be sure.
     String sql="UPDATE "+this.dbschema+"."+this.dbtableprefix+"scaffold"
 	+" SET scafsmi='"+scafrec.getCansmi()+"',scaftree='"+getScaffoldString(scafrec)+"'"
 	+" WHERE id="+scafrec.getID();
     pg_utils.execute(this.dbcon,sql); // Check ok?  How?
-    this.dbcon.commit();
 
     sql="DELETE FROM "+this.dbschema+"."+this.dbtableprefix+"scaf2scaf"
 	+" WHERE parent_id="+scafrec.getID() ;
     pg_utils.execute(this.dbcon,sql);
-    this.dbcon.commit();
 
     HashSet<Long> chids = scafrec.getChildIDs();
     for (Iterator<Long> itr=chids.iterator(); itr.hasNext(); )
@@ -350,13 +353,12 @@ public class ScaffoldDB
       sql="INSERT INTO "+this.dbschema+"."+this.dbtableprefix+"scaf2scaf"
 	+" (parent_id,child_id)  VALUES ("+scafrec.getID()+","+chid+")" ;
       pg_utils.execute(this.dbcon,sql); // Check ok?  How?
-      this.dbcon.commit();
     }
 
     return ok;
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Close database&#46;
+  /**	Close database.
   */
   public void close()
 	throws SQLException
@@ -364,11 +366,12 @@ public class ScaffoldDB
     this.dbcon.close();
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Delete all data from scaffold databases&#46;  Tables and schema remain&#46;
+  /**	Delete all data from scaffold databases.  Tables and schema remain.
   */
   public void removeAll()
 	throws SQLException
   {
+    this.dbcon.setAutoCommit(true);  //Should be true by default but let's be sure.
     String sql="DELETE FROM "+this.dbschema+"."+this.dbtableprefix+"scaffold";
     pg_utils.execute(this.dbcon,sql); // Check ok?  How?
 
@@ -376,29 +379,28 @@ public class ScaffoldDB
     pg_utils.execute(this.dbcon,sql); // Check ok?  How?
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Destroy databases&#46;  Tables are dropped (not schema)&#46;
+  /**	Destroy databases.  Tables are dropped (not schema).
   */
   public void destroyDB()
 	throws SQLException
   {
+    this.dbcon.setAutoCommit(true);  //Should be true by default but let's be sure.
     String sql="DROP TABLE "+this.dbschema+"."+this.dbtableprefix+"scaffold CASCADE";
     pg_utils.execute(this.dbcon,sql); // Check ok?  How?
-    this.dbcon.commit();
     sql="DROP TABLE "+this.dbschema+"."+this.dbtableprefix+"scaf2scaf CASCADE";
     pg_utils.execute(this.dbcon,sql); // Check ok?  How?
-    this.dbcon.commit();
   }
   /////////////////////////////////////////////////////////////////////////////
   /**	Merges a fully populated ScaffoldTree defined by the Scaffold
-	argument with the ScaffoldDB&#46;  
+	argument with the ScaffoldDB.  
 
-	New scaffolds are assigned new IDs&#46;  Existing scaffolds are
-	recognized as such&#46;  Initially called with new root scaffold,
-	then recursively&#46;  For each call, process all immediate child
-	scaffolds, then assign ChildIDs and ParentID to ScaffoldRecord&#46;
+	New scaffolds are assigned new IDs.  Existing scaffolds are
+	recognized as such.  Initially called with new root scaffold,
+	then recursively.  For each call, process all immediate child
+	scaffolds, then assign ChildIDs and ParentID to ScaffoldRecord.
 
-	Note that a new unknown parent may have known and/or new child scaffolds&#46;	
-	Hence this recursive method must handle the known-scaffold case&#46;
+	Note that a new unknown parent may have known and/or new child scaffolds.	
+	Hence this recursive method must handle the known-scaffold case.
   */
   public int mergeScaffoldTree(Scaffold scaf)
 	throws SQLException
@@ -451,12 +453,12 @@ public class ScaffoldDB
     return n_new;
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Populates an incomplete ScaffoldTree from known root Scaffold&#46;
+  /**	Populates an incomplete ScaffoldTree from known root Scaffold.
 	Note that since root scaffold is known, all child scaffolds must also
-	be known&#46;
+	be known.
 
 	For known scaffold, obtain ID from store, and find child scaffolds
-	in store to populate ScaffoldTree&#46;
+	in store to populate ScaffoldTree.
   */
   public int populateScaffoldTree(Scaffold scaf)
 	throws SQLException
@@ -491,8 +493,8 @@ public class ScaffoldDB
   }
   /////////////////////////////////////////////////////////////////////////////
   /**	Generates string representing the hierarchical scaffold sub tree
-        rooted by this scaffold&#46; Same format as Scaffold.subTreeAsString()&#46;
-	e&#46;g&#46; "1:(2,3)" or "1:(2:(3,4,5),6:(4,7))"
+        rooted by this scaffold. Same format as Scaffold.subTreeAsString().
+	e.g. "1:(2,3)" or "1:(2:(3,4,5),6:(4,7))"
   */
   public String getScaffoldString(ScaffoldRecord scafrec)
 	throws SQLException
@@ -519,14 +521,14 @@ public class ScaffoldDB
     return str;
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Is stereo flag on for scaffolds in this ScaffoldDB&#46;
+  /**	Is stereo flag on for scaffolds in this ScaffoldDB.
   */
   public Boolean isStereo()
   {
     return this.stereo;
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Is keep_nitro_attachments flag on for scaffolds in this ScaffoldDB&#46;
+  /**	Is keep_nitro_attachments flag on for scaffolds in this ScaffoldDB.
   */
   public Boolean isKeep_nitro_attachments()
   {
@@ -535,7 +537,7 @@ public class ScaffoldDB
   /////////////////////////////////////////////////////////////////////////////
   /**	Dump all scaffolds in this ScaffoldDB to file; format is 
 	legal smiles file and normal hier_scaffolds output:
-	(SMILES ID SCAFTREE)&#46;  
+	(SMILES ID SCAFTREE).  
 	@return number of scaffolds written
   */
   public long dumpToFile(File fout,int verbose)
@@ -560,12 +562,12 @@ public class ScaffoldDB
     return nscaf;
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	For testing only&#46;
+  /**	For testing only.
 	<br/>
 	CREATE ROLE www WITH LOGIN PASSWORD 'foobar';
 	GRANT CONNECT ON DATABASE mydb TO www ;
 	GRANT CREATE ON DATABASE mydb TO www ;
-	(Then use schema "public"&#46;)
+	(Then use schema "public".)
   */
   public static void main(String[] args)
   {
