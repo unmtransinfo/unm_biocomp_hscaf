@@ -1,0 +1,201 @@
+# Introduction #
+
+This package can be used via two Java applications or its API.  To get started it may be helpful to try the applications and learn how the algorithm works by example.
+
+# Using the Applications #
+
+The applications are:
+  * **hier\_scaffolds** - HierS scaffolds analyzer
+  * **hier\_scaffolds\_common** - search for common HierS scaffolds
+  * **hier\_scaffolds\_stats** - postprocess/analyze hier\_scaffolds output
+
+hier\_scaffolds application command line help
+```
+hier_scaffolds - HierS scaffolds analyzer
+
+From the University of New Mexico Translational Informatics Division
+(http://medicine.unm.edu/informatics/).
+
+usage: hier_scaffolds [options]
+
+  required:
+    -i IFILE .................. input file of molecules
+    -o OFILE .................. one (possibly) disconnected mol of parts per input mol
+  or
+    -bdb_dump OUTSCAFS ........ dump existing BerkeleyDB at BDBDIR
+  or
+    -rdb_dump OUTSCAFS ........ dump existing RDB
+
+  options:
+
+  Algorithm:
+    -keep_nitro_attachments ... atoms single bonded to ring N remain in scaffold
+    -stereo ................... stereo scaffolds (default non-stereo)
+  I/O:
+    -out_scaf OUTSCAFS ........ unique scafs numbered sequentially (new + db)
+    -inc_mol .................. include mols in output (-o)
+    -inc_scaf ................. include scaffolds in output (-o)
+    -inc_link ................. include linkers in output (-o)
+    -inc_chain ................ include sidechains in output (-o)
+    -scaflist_title  .......... scaf/link/chain list written to title
+    -scaflist_append2title .... scaf/link/chain list appended to title
+    -scaflist_sdtag SDTAG ..... scaf list written to SD dataitem
+    -append2ofile ............. output mols appended to -o OFILE (resume mode)
+  BerkeleyDB:
+    -bdb ...................... use BerkeleyDB for storage and performance
+    -bdb_dir BDBDIR ........... scratch dir for BerkeleyDB files [/tmp/hscaf]
+    -bdb_keep ................. keep BerkeleyDB files after job completion
+    -bdb_predelete ............ initially delete BerkeleyDB at BDBDIR (if existing)
+    -bdb_resume ............... resume job using existing BerkeleyDB
+  RDB:
+    -rdb ...................... use RDB for storage and performance
+    -rdb_keep ................. keep RDB tables after job completion
+    -rdb_predelete ............ initially delete RDB (if existing)
+    -rdb_resume ............... resume job using existing RDB
+    -rdb_host DBHOST .......... RDB host [localhost]
+    -rdb_port DBPORT .......... RDB port [5432]
+    -rdb_name DBNAME .......... RDB db name
+    -rdb_schema DBSCHEMA ...... RDB db schema [public]
+    -rdb_user DBUSER .......... RDB db user [$USER]
+    -rdb_pw DBPW .............. RDB db password
+    -rdb_tableprefix PREFIX ... RDB db table prefix
+    -rdb_reindex_per N ........ RDB reindex once per N mols [5000]
+  Misc:
+    -maxatoms MAX ............. max atom count of input mol [100]
+    -maxrings MAX ............. max ring count of input mol [10]
+    -show_js .................. show junctions (as pseudoatoms) -- for debugging, visualizing
+    -nmax NMAX ................ quit after NMAX molecules
+    -nskip NSKIP .............. skip NSKIP molecules
+    -v ........................ verbose
+    -vv ....................... very verbose
+    -vvv or -debug ............ very very verbose (slows process)
+    -h ........................ this help
+
+
+```
+
+hier\_scaffolds\_common application command line help
+```
+ hier_scaffolds_common - search for common HierS scaffolds
+ 
+ From the University of New Mexico Translational Informatics Division
+(http://medicine.unm.edu/informatics/).
+ 
+ usage: hier_scaffolds_common [options]
+  required:
+    -q IFILE .................. query molecule
+    -db IFILE ................. db molecule[s]
+    -o OFILE .................. common scaffold[s] ordered by size
+  options:
+    -out_scaf OUTSCAFS ........ unique scafs numbered sequentially
+    -maxmol MAX ............... max size/atoms of input mol [default=100]
+    -show_js .................. show junction points (as pseudoatoms) -- for debugging, visualizing
+    -keep_nitro_attachments ... atoms single bonded to ring N remain in scaffold
+    -stereo ................... stereo scaffolds (default is non-stereo)
+    -v ........................ verbose
+    -vv ....................... very verbose
+    -h ........................ this help
+```
+
+hier\_scaffolds\_stats application command line help
+```
+hier_scaffolds_stats - postprocess HierS scaffolds output (from hier_scaffolds)
+
+From the University of New Mexico Division Translational Informatics Division
+(http://medicine.unm.edu/informatics/).
+
+usage: hier_scaffolds_stats [options]
+  required:
+    -i IFILE ................... input file of molecules annotated with scaf info
+    -in_scaf INSCAF ............ input file of scafs, numbered sequentially
+    -out_scaf OUTSCAF .......... same scafs; stats appended to titles
+  options:
+    -scaflist_title  ........... scaf/link/chain list is title
+    -scaflist_append2title ..... scaf/link/chain is 2nd title field
+    -scaflist_sdtag SDTAG ...... scaf list input SD dataitem
+    -report_mol_lists_ids ...... after stats, append list of mol ids (maybe fat)
+    -sort_by_frequency ......... output scaf/link/chain lists sorted
+    -v ......................... verbose
+    -vv ........................ very verbose
+    -h ......................... this help
+```
+
+## Example commands ##
+
+To run the applications, download unm\_biocomp\_hscaf.jar and assure that JChem (v5.8.3 recommended) is installed.  The jar looks for jchem.jar in either /usr/local/ChemAxon/JChem/lib/ or /home/app/ChemAxon/JChem/lib/ but it can be installed elsewhere if specified explicitly.  The jar's default main class is edu.unm.health.biocomp.hier\_scaffolds.
+
+Analyze input file molecules for scaffolds:
+```
+java -jar unm_biocomp_hscaf.jar -i test.smi -out_scaf test_hscaf_scaf.smi -v
+```
+
+
+Compare query molecule with database for common scaffolds:
+```
+export CLASSPATH=/usr/local/ChemAxon/JChem/lib/jchem.jar:/usr/share/java/berkeleydb.jar
+java -classpath $CLASSPATH:unm_biocomp_hscaf.jar edu.unm.health.biocomp.hscaf.hier_scaffolds_common
+ -q test_query.smi -db test_db.smi -o test_hscafcommon_out.smi -out_scaf test_hscafcommon_scaf.smi -v
+```
+
+# Compiling the Source Code #
+
+Ant should work to compile the source code using the following build.xml file.  First extract the code from the jarfile:
+```
+  $ mkdir {builddir}
+  $ cd {builddir}
+  $ jar xf unm_biocomp_hscaf_distro.jar
+  $ cp {downloaddir}/build.xml .
+  $ ant
+```
+
+build.xml:
+
+```
+<?xml version="1.0" ?>
+
+<project name="all"
+  basedir="."
+  default="build">
+
+  <description>
+	HScaf library.
+	Jeremy Yang, UNM Translational Informatics Division
+  </description>
+
+  <property environment="env" />
+  <property name="libjchem" location="${env.JCHEMHOME}/lib/jchem.jar" />
+  <property name="libberkeleydb" location="/home/app/lib/berkeleydb.jar" />
+  <property name="libpgsql" location="/home/app/lib/postgresql-8.3-607.jdbc3.jar" />
+
+  <target name="hscaf_lib" >
+    <javac
+  srcdir="${basedir}/edu/unm/health/biocomp/hscaf" includes="*.java"
+ classpath="${basedir};${basedir}/edu/unm/health/biocomp/hscaf;${libjchem};${libberkeleydb}" / >
+    <javac
+  srcdir="${basedir}/edu/unm/health/biocomp/db" includes="*.java"
+ classpath="${basedir};${basedir}/edu/unm/health/biocomp/db;${libpgsql}" / >
+    <javac
+  srcdir="${basedir}/edu/unm/health/biocomp/util" includes="*.java"
+ classpath="${basedir};${basedir}/edu/unm/health/biocomp/util" / >
+    <javac
+  srcdir="${basedir}/edu/unm/health/biocomp/http" includes="*.java"
+ classpath="${basedir};${basedir}/edu/unm/health/biocomp/http" / >
+
+    <jar destfile="${basedir}/unm_biocomp_hscaf_distro.jar" >
+      <fileset dir="${basedir}" includes="edu/unm/health/biocomp/hscaf/*.class" />
+      <fileset dir="${basedir}" includes="edu/unm/health/biocomp/db/*.class" />
+      <fileset dir="${basedir}" includes="edu/unm/health/biocomp/util/*.class" />
+      <fileset dir="${basedir}" includes="edu/unm/health/biocomp/http/*.class" />
+
+    </jar>
+  </target>
+
+  <target name="clean">
+    <delete>
+      <fileset dir="${basedir}" includes="**/*.class"/>
+      <fileset dir="${basedir}" includes="**/*.jar"/>
+    </delete>
+  </target>
+</project>
+
+```
