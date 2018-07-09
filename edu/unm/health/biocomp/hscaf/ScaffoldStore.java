@@ -22,10 +22,10 @@ import chemaxon.formats.MolFormatException;
 /**	Initiate and provide local storage &amp; retrieval via BerkeleyDB.
 	For large jobs this avoids memory limits and improves performance by
 	storing solved scaffolds for rapid lookup and avoiding re-calculation.
-	<br />
+	<br>
 	Note that ScaffoldSet is an alternative for in-memory storage,
 	for if BerkeleyDB is unavailable or for small datasets.
-	<br />
+	<br>
 	For largest jobs use ScaffoldDB (PostgreSQL).
 	@author Jeremy J Yang
  */
@@ -38,8 +38,8 @@ public class ScaffoldStore
   private Boolean stereo;
   private Boolean keep_nitro_attachments;
   
-  protected PrimaryIndex<Long, ScaffoldEntity> scaffoldById;
-  protected SecondaryIndex<String, Long, ScaffoldEntity> scaffoldByCanSmi;
+  protected PrimaryIndex<Long, ScaffoldStoreEntity> scaffoldById;
+  protected SecondaryIndex<String, Long, ScaffoldStoreEntity> scaffoldByCanSmi;
 
   /////////////////////////////////////////////////////////////////////////////
   /**	Constructor creates or opens existing database in directory specified.
@@ -57,7 +57,7 @@ public class ScaffoldStore
     this.storeConf.setAllowCreate(true);
     this.storeConf.setTransactional(true);
     this.scafEntityStore = new EntityStore(env,"scaffolds",storeConf);
-    this.scaffoldById = this.scafEntityStore.getPrimaryIndex(Long.class, ScaffoldEntity.class);
+    this.scaffoldById = this.scafEntityStore.getPrimaryIndex(Long.class, ScaffoldStoreEntity.class);
     this.scaffoldByCanSmi = this.scafEntityStore.getSecondaryIndex(scaffoldById, String.class, "canSmi");
     this.stereo=stereo;
     this.keep_nitro_attachments=keep_nitro_attachments;
@@ -68,7 +68,7 @@ public class ScaffoldStore
   public long count()
 	throws DatabaseException
   {
-    return this.scafEntityStore.getPrimaryIndex(Long.class,ScaffoldEntity.class).count();
+    return this.scafEntityStore.getPrimaryIndex(Long.class,ScaffoldStoreEntity.class).count();
   }
   /////////////////////////////////////////////////////////////////////////////
   /**	Returns information about contents of ScaffoldStore and underlying
@@ -86,8 +86,8 @@ public class ScaffoldStore
     txt+=("count() = "+this.count()+"\n");
     Long id_max=0L;
     Transaction txn = this.env.beginTransaction(null, null);
-    EntityCursor<ScaffoldEntity> curr = this.scaffoldById.entities(txn, CursorConfig.DEFAULT);
-    for (ScaffoldEntity scaf=curr.first(); scaf!=null; scaf=curr.next())
+    EntityCursor<ScaffoldStoreEntity> curr = this.scaffoldById.entities(txn, CursorConfig.DEFAULT);
+    for (ScaffoldStoreEntity scaf=curr.first(); scaf!=null; scaf=curr.next())
       id_max=Math.max(id_max,scaf.getId());
     curr.close();
     txn.commitNoSync();
@@ -120,8 +120,8 @@ public class ScaffoldStore
 	throws DatabaseException
   {
     //Transaction txn = this.env.beginTransaction(null, null);
-    //EntityCursor<ScaffoldEntity> curr = this.scaffoldById.entities(txn, CursorConfig.DEFAULT);
-    //for(ScaffoldEntity scaf = curr.first(); scaf != null; scaf = curr.next()) {
+    //EntityCursor<ScaffoldStoreEntity> curr = this.scaffoldById.entities(txn, CursorConfig.DEFAULT);
+    //for(ScaffoldStoreEntity scaf = curr.first(); scaf != null; scaf = curr.next()) {
     //  curr.delete();
     //}
     //curr.close();
@@ -205,7 +205,7 @@ public class ScaffoldStore
 	New scaffolds are assigned new IDs.  Existing scaffolds are
 	recognized as such.  Initially called with new root scaffold,
 	then recursively.  For each call, process all immediate child
-	scaffolds, then assign ChildIds and ParentId to ScaffoldEntity.
+	scaffolds, then assign ChildIds and ParentId to ScaffoldStoreEntity.
 
 	Note that a new unknown parent may have known and/or new child scaffolds.	
 	Hence this recursive method must handle the known-scaffold case.
@@ -217,7 +217,7 @@ public class ScaffoldStore
     String cansmi=scaf.getCansmi();
     //System.err.println("DEBUG: (mergeScaffoldTree) scafsmi="+cansmi);
     long id=0L;
-    // First either find existing or create new ScaffoldEntity.
+    // First either find existing or create new ScaffoldStoreEntity.
     if (this.scaffoldByCanSmi.contains(cansmi))
     {
       id=this.scaffoldByCanSmi.get(cansmi).getId();
@@ -226,13 +226,13 @@ public class ScaffoldStore
     else
     {
       id=this.count()+1;	//new ID (manual)
-      this.scaffoldById.put(new ScaffoldEntity(id,cansmi));
+      this.scaffoldById.put(new ScaffoldStoreEntity(id,cansmi));
       ++n_new;
     }
     scaf.setID(id);
-    ScaffoldEntity scent=this.scaffoldById.get(id);
+    ScaffoldStoreEntity scent=this.scaffoldById.get(id);
 
-    // For each child, find existing or create new ScaffoldEntity, then recurse.
+    // For each child, find existing or create new ScaffoldStoreEntity, then recurse.
     for (Scaffold cscaf : scaf.getChildScaffolds())
     {
       cansmi=cscaf.getCansmi();
@@ -244,10 +244,10 @@ public class ScaffoldStore
       else
       {
         cid=this.count()+1;	//new ID (manual)
-        this.scaffoldById.put(new ScaffoldEntity(cid,cansmi));
+        this.scaffoldById.put(new ScaffoldStoreEntity(cid,cansmi));
         ++n_new;
       }
-      ScaffoldEntity cscent=this.scaffoldById.get(cid);
+      ScaffoldStoreEntity cscent=this.scaffoldById.get(cid);
       cscaf.setID(cid);
       scent.addChildId(cid);
       this.scaffoldById.put(scent); //update
@@ -280,14 +280,14 @@ public class ScaffoldStore
       //System.err.println("DEBUG: (populateScaffoldTree) aaack! ID not found...");
       return 0; //Should not happen.
     }
-    ScaffoldEntity scent = this.scaffoldById.get(scaf.getID());
+    ScaffoldStoreEntity scent = this.scaffoldById.get(scaf.getID());
     HashSet<Long> chids = scent.getChildIds();
     //System.err.println("DEBUG: (populateScaffoldTree) chids.size() = "+chids.size());
     for (Iterator<Long> itr=chids.iterator(); itr.hasNext(); )
     {
       long chid=itr.next();
       //if (chid==0) System.err.println("DEBUG: (populateScaffoldTree) ERROR; chid = "+chid);
-      ScaffoldEntity cscent = this.scaffoldById.get(chid);
+      ScaffoldStoreEntity cscent = this.scaffoldById.get(chid);
       String cansmi = cscent.getCanSmi();
       //System.err.println("DEBUG: (populateScaffoldTree) chid = "+chid+" ; smi = "+cansmi);
       Scaffold cscaf = null;
@@ -312,9 +312,9 @@ public class ScaffoldStore
   /////////////////////////////////////////////////////////////////////////////
   /**	Generates string representing the hierarchical scaffold sub tree
         rooted by this scaffold. Same format as Scaffold.subTreeAsString().
-	e.g. "1:(2,3)" or "1:(2:(3,4,5),6:(4,7))"
+	e.g. "1(2,3)" or "1(2(3,4,5),6(4,7))"
   */
-  public String getScaffoldString(ScaffoldEntity scent)
+  public String getScaffoldString(ScaffoldStoreEntity scent)
 	throws DatabaseException
   {
     if (scent==null) return "";
@@ -322,17 +322,14 @@ public class ScaffoldStore
     if (scent.getChildIds().size()>0)
     {
       //System.err.println("DEBUG: scent.getChildIds().size()="+scent.getChildIds().size());
-      str+=":(";
+      str+="(";
       long i=0L;
       HashSet<Long> chids = scent.getChildIds();
       for (Iterator<Long> itr=chids.iterator(); itr.hasNext(); )
       {
         long id=itr.next();
-        if (i>0) str+=",";
-        ScaffoldEntity cscent=this.scaffoldById.get(id);
-        //if (cscent==null) System.err.println("DEBUG: id="+id+", cscent==null.");
-        str+=this.getScaffoldString(cscent); //recurse
-        ++i;
+        ScaffoldStoreEntity cscent=this.scaffoldById.get(id);
+        str+=(((i++>0)?",":"")+this.getScaffoldString(cscent)); //recurse
       }
       str+=")";
     }
@@ -371,7 +368,7 @@ public class ScaffoldStore
 
     for (long scaf_id=1L;true;++scaf_id)
     {
-      ScaffoldEntity scent=null;
+      ScaffoldStoreEntity scent=null;
       try {
         scent=this.scaffoldById.get(scaf_id);
       }

@@ -9,7 +9,7 @@ import chemaxon.sss.search.SearchException;
 import chemaxon.marvin.io.MolExportException;
  
 /**	Represents any single HierS linker
-	<br />
+	<br>
 	@see edu.unm.health.biocomp.hscaf.Scaffold
 	@see edu.unm.health.biocomp.hscaf.ScaffoldTree
 	@author Jeremy J Yang

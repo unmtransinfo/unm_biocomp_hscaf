@@ -24,27 +24,29 @@ import chemaxon.license.LicenseManager;
 import chemaxon.marvin.io.MolExportException;
 
 import edu.unm.health.biocomp.http.*;
+import edu.unm.health.biocomp.util.*;
 
 /**	HierS web app.  Hierarchical scaffold analysis (ref: Wilkens, et al.).
-	<br />
-	See GCode project:
-	<a href="http://code.google.com/p/unm-biocomp-hscaf/">UNM-Biocomp-HScaf</a>
+	<br>
+	See GitHub repo:
+	<a href="https://github.com/jeremyjyang/unm-biocomp-hscaf.">UNM-Biocomp-HScaf</a>
 	for more info.
-	<br />
+	<br>
 	@author Jeremy J Yang
 */
 public class hscaf_servlet extends HttpServlet
 {
   private static String SERVLETNAME=null;
-  private static String contextpath=null;
-  private static String LOGDIR=null;
+  private static String CONTEXTPATH=null;
+  private static String LOGDIR=null;	// configured in web.xml
+  private static String APPNAME=null;	// configured in web.xml
   private static String UPLOADDIR=null;	// configured in web.xml
   private static String SCRATCHDIR=null;      // configured in web.xml
   private static String PREFIX=null;
   private static int scratch_retire_sec=3600;
   private static int N_MAX=100; // configured in web.xml
-  private static ServletContext context=null;
-  private static ServletConfig config=null;
+  private static ServletContext CONTEXT=null;
+  //private static ServletConfig CONFIG=null;
   private static ResourceBundle rb=null;
   private static PrintWriter out=null;
   private static ArrayList<String> outputs=null;
@@ -53,9 +55,9 @@ public class hscaf_servlet extends HttpServlet
   private static ArrayList<Molecule> mols=null;
   private static LinkedHashMap<String,Integer> sizes_h=null;
   private static LinkedHashMap<String,Integer> sizes_w=null;
-  private static int serverport=0;
-  private static String servername=null;
-  private static String remotehost=null;
+  private static int SERVERPORT=0;
+  private static String SERVERNAME=null;
+  private static String REMOTEHOST=null;
   private static String datestr=null;
   private static File logfile=null;
   private static String color1="#EEEEEE";
@@ -68,22 +70,19 @@ public class hscaf_servlet extends HttpServlet
   public void doPost(HttpServletRequest request,HttpServletResponse response)
       throws IOException,ServletException
   {
-    serverport=request.getServerPort();
-    servername=request.getServerName();
-    remotehost=request.getHeader("X-Forwarded-For"); // client (original)
-    if (remotehost!=null)
+    SERVERPORT=request.getServerPort();
+    SERVERNAME=request.getServerName();
+    if (SERVERNAME.equals("localhost")) SERVERNAME=InetAddress.getLocalHost().getHostAddress();
+    REMOTEHOST=request.getHeader("X-Forwarded-For"); // client (original)
+    if (REMOTEHOST!=null)
     {
-      String[] addrs=Pattern.compile(",").split(remotehost);
-      if (addrs.length>0) remotehost=addrs[addrs.length-1];
+      String[] addrs=Pattern.compile(",").split(REMOTEHOST);
+      if (addrs.length>0) REMOTEHOST=addrs[addrs.length-1];
     }
     else
     {
-      // remotehost=request.getRemoteHost(); // client (may be proxy)
-      remotehost=request.getRemoteAddr(); // client (may be proxy)
+      REMOTEHOST=request.getRemoteAddr(); // client (may be proxy)
     }
-
-    contextpath=request.getContextPath();
-    LOGDIR=System.getenv("CATALINA_HOME")+"/logs"+contextpath;
     rb=ResourceBundle.getBundle("LocalStrings",request.getLocale());
 
     MultipartRequest mrequest=null;
@@ -97,14 +96,15 @@ public class hscaf_servlet extends HttpServlet
 
     // main logic:
     ArrayList<String> cssincludes = new ArrayList<String>(Arrays.asList("biocomp.css"));
-    ArrayList<String> jsincludes = new ArrayList<String>(Arrays.asList("/marvin/marvin.js","Mol2Img.js","ddtip.js"));
+    ArrayList<String> jsincludes = new ArrayList<String>(Arrays.asList("/marvin/marvin.js","biocomp.js","ddtip.js"));
     boolean ok=initialize(request,mrequest);
     if (!ok)
     {
-        response.setContentType("text/html");
-        out=response.getWriter();
-        out.println(HtmUtils.headerHtm(SERVLETNAME,jsincludes,cssincludes,JavaScript(),color1,request));
-        out.println(HtmUtils.footerHtm(errors,true));
+      response.setContentType("text/html");
+      out=response.getWriter();
+      out.println(HtmUtils.HeaderHtm(APPNAME,jsincludes,cssincludes,JavaScript(),color1,request));
+      out.println(HtmUtils.FooterHtm(errors,true));
+      return;
     }
     else if (mrequest!=null)	//method=POST, normal operation
     {
@@ -112,7 +112,7 @@ public class hscaf_servlet extends HttpServlet
       {
         response.setContentType("text/html");
         out=response.getWriter();
-        out.println(HtmUtils.headerHtm(SERVLETNAME,jsincludes,cssincludes,JavaScript(),color1,request));
+        out.println(HtmUtils.HeaderHtm(APPNAME,jsincludes,cssincludes,JavaScript(),color1,request));
         out.println(formHtm(mrequest,response));
         ArrayList<ScaffoldTree> scaftrees = HScafsGenerate(mols);
 
@@ -130,8 +130,8 @@ public class hscaf_servlet extends HttpServlet
         {
           HScafsResults(response,scaftrees);
         }
-        out.println(HtmUtils.outputHtm(outputs));
-        out.println(HtmUtils.footerHtm(errors,true));
+        out.println(HtmUtils.OutputHtm(outputs));
+        out.println(HtmUtils.FooterHtm(errors,true));
         HtmUtils.PurgeScratchDirs(Arrays.asList(SCRATCHDIR),scratch_retire_sec,false,".",(HttpServlet) this);
       }
     }
@@ -144,32 +144,30 @@ public class hscaf_servlet extends HttpServlet
       {
         response.setContentType("text/html");
         out=response.getWriter();
-        out.println(HtmUtils.headerHtm(SERVLETNAME,jsincludes,cssincludes,JavaScript(),color1,request));
+        out.println(HtmUtils.HeaderHtm(APPNAME,jsincludes,cssincludes,JavaScript(),color1,request));
         out.println(helpHtm());
-        out.println(HtmUtils.footerHtm(errors,true));
+        out.println(HtmUtils.FooterHtm(errors,true));
       }
       else if (downloadtxt!=null && downloadtxt.length()>0) // POST param
       {
         ServletOutputStream ostream=response.getOutputStream();
-        HtmUtils.downloadString(response,ostream,downloadtxt,
+        HtmUtils.DownloadString(response,ostream,downloadtxt,
           request.getParameter("fname"));
       }
       else if (downloadfile!=null && downloadfile.length()>0) // POST param
       {
         ServletOutputStream ostream=response.getOutputStream();
-        HtmUtils.downloadFile(response,ostream,downloadfile,
+        HtmUtils.DownloadFile(response,ostream,downloadfile,
           request.getParameter("fname"));
       }
       else	// GET method, initial invocation of servlet w/ no params
       {
         response.setContentType("text/html");
         out=response.getWriter();
-        out.println(HtmUtils.headerHtm(SERVLETNAME,jsincludes,cssincludes,JavaScript(),color1,request));
+        out.println(HtmUtils.HeaderHtm(APPNAME,jsincludes,cssincludes,JavaScript(),color1,request));
         out.println(formHtm(mrequest,response));
-        out.println("<SCRIPT LANGUAGE=\"JavaScript\">");
-        out.println("go_reset(window.document.mainform);");
-        out.println("</SCRIPT>");
-        out.println(HtmUtils.footerHtm(errors,true));
+        out.println("<SCRIPT>go_reset(window.document.mainform)</SCRIPT>");
+        out.println(HtmUtils.FooterHtm(errors,true));
       }
     }
   }
@@ -188,12 +186,18 @@ public class hscaf_servlet extends HttpServlet
     sizes_h.put("m",200); sizes_w.put("m",220);
     sizes_h.put("l",240); sizes_w.put("l",280);
 
-    errors.add("<A HREF=\"http://medicine.unm.edu/informatics/\">"+
-      "<IMG BORDER=0 SRC=\"/images/biocomp_logo_only.gif\"></A>"+
-      SERVLETNAME+" web app from UNM Translational Informatics.");
-    errors.add("<A HREF=\"http://www.chemaxon.com\">"+
-      "<IMG BORDER=0 SRC=\"/images/chemaxon.png\"></A>\n"+
-          "JChem from ChemAxon Ltd.");
+    String logo_htm="<TABLE CELLSPACING=5 CELLPADDING=5><TR><TD>";
+    String imghtm=("<IMG BORDER=0 SRC=\"/tomcat"+CONTEXTPATH+"/images/biocomp_logo_only.gif\">");
+    String tiphtm=(APPNAME+" web app from UNM Translational Informatics.");
+    String href=("http://medicine.unm.edu/informatics/");
+    logo_htm+=(HtmUtils.HtmTipper(imghtm,tiphtm,href,200,"white"));
+    logo_htm+="</TD><TD>";
+    imghtm=("<IMG BORDER=0 SRC=\"/tomcat"+CONTEXTPATH+"/images/chemaxon_powered_100px.png\">");
+    tiphtm=("JChem from ChemAxon Ltd.");
+    href=("http://www.chemaxon.com");
+    logo_htm+=(HtmUtils.HtmTipper(imghtm,tiphtm,href,200,"white"));
+    logo_htm+="</TD></TR></TABLE>";
+    errors.add(logo_htm);
 
     //Create webapp-specific log dir if necessary:
     File dout=new File(LOGDIR);
@@ -244,6 +248,7 @@ public class hscaf_servlet extends HttpServlet
       String[] fields=Pattern.compile("\\t").split(line);
       if (n_lines==2) startdate=fields[0];
     }
+    buff.close(); //Else can result in error: "Too many open files"
     Calendar calendar=Calendar.getInstance();
     if (n_lines>2)
     {
@@ -267,6 +272,11 @@ public class hscaf_servlet extends HttpServlet
     PREFIX=SERVLETNAME+"."+datestr+"."+String.format("%03d",rand.nextInt(1000));
 
     LicenseManager.refresh();
+    if (!LicenseManager.isLicensed(LicenseManager.JCHEM))
+    {
+      errors.add("ERROR: ChemAxon license error; JCHEM is required.");
+      return false;
+    }
 
     if (mrequest==null) return true;
 
@@ -281,8 +291,9 @@ public class hscaf_servlet extends HttpServlet
 
     if (params.isChecked("verbose"))
     {
-      errors.add("JChem version: "+chemaxon.jchem.version.VersionInfo.JCHEM_VERSION);
-      errors.add("server: "+context.getServerInfo());
+      //errors.add("JChem version: "+chemaxon.jchem.version.VersionInfo.JCHEM_VERSION);
+      //errors.add("JChem version: "+com.chemaxon.version.VersionInfo.getVersion()); //v6.3+
+      errors.add("server: "+CONTEXT.getServerInfo());
     }
 
     String fname="infile";
@@ -414,61 +425,44 @@ public class hscaf_servlet extends HttpServlet
     else runmode_analyze="CHECKED";
 
     String htm=
-     ("<FORM NAME=\"mainform\" METHOD=POST")
-    +(" ACTION=\""+response.encodeURL(SERVLETNAME)+"\"")
-    +(" ENCTYPE=\"multipart/form-data\">\n")
+     ("<FORM NAME=\"mainform\" METHOD=POST ACTION=\""+response.encodeURL(SERVLETNAME)+"\" ENCTYPE=\"multipart/form-data\">\n")
     +("<INPUT TYPE=HIDDEN NAME=\"hscaf\">\n")
-    +("<TABLE WIDTH=\"100%\"><TR><TD><H1>"+SERVLETNAME+"</H1></TD>\n")
+    +("<TABLE WIDTH=\"100%\"><TR><TD><H1>"+APPNAME+"</H1></TD>\n")
     +("<TD ALIGN=RIGHT>\n")
     +("<BUTTON TYPE=BUTTON onClick=\"void window.open('"+response.encodeURL(SERVLETNAME)+"?help=TRUE','helpwin','width=600,height=400,scrollbars=1,resizable=1')\"><B>help</B></BUTTON>\n")
-    +("<BUTTON TYPE=BUTTON onClick=\"go_reset(this.form)\">\n")
-    +("<B>clear</B></BUTTON>\n")
+    +("<BUTTON TYPE=BUTTON onClick=\"window.location.replace('"+response.encodeURL(SERVLETNAME)+"')\"><B>Reset</B></BUTTON>\n")
     +("</TD></TR></TABLE>\n")
     +("<HR>\n")
     +("<TABLE WIDTH=\"100%\" CELLPADDING=5 CELLSPACING=5>\n")
     +("<TR BGCOLOR=\"#CCCCCC\"><TD VALIGN=TOP WIDTH=\"60%\">\n")
     +("format:"+molfmt_menu)
-    +("<INPUT TYPE=CHECKBOX NAME=\"file2txt\" VALUE=\"CHECKED\"")
-    +(" "+params.getVal("file2txt")+">file2txt<BR>\n")
+    +("<INPUT TYPE=CHECKBOX NAME=\"file2txt\" VALUE=\"CHECKED\" "+params.getVal("file2txt")+">file2txt<BR>\n")
     +("upload: <INPUT TYPE=\"FILE\" NAME=\"infile\"> ...or paste:")
-    +("<BR><TEXTAREA NAME=\"intxt\" WRAP=OFF ROWS=12 COLS=60>")
-    +(params.getVal("intxt"))
-    +("</TEXTAREA>\n")
+    +("<BR><TEXTAREA NAME=\"intxt\" WRAP=OFF ROWS=12 COLS=60>"+params.getVal("intxt")+"</TEXTAREA>\n")
     +("</TD>\n")
     +("<TD VALIGN=TOP>\n")
     +("<B>task:</B><BR>\n")
-    +("&nbsp;<INPUT TYPE=RADIO NAME=\"runmode\" VALUE=\"analyze\"")
-    +(runmode_analyze+">analyze mols &amp; group<BR>")
-    +("&nbsp;<INPUT TYPE=RADIO NAME=\"runmode\" VALUE=\"1xN\"")
-    +(runmode_1xN+">max common scaffolds (1xN)<BR>\n")
-    +("&nbsp;<INPUT TYPE=RADIO NAME=\"runmode\" VALUE=\"NxN\"")
-    +(runmode_NxN+">max common scaffolds (NxN)<BR>\n")
+    +("&nbsp;<INPUT TYPE=RADIO NAME=\"runmode\" VALUE=\"analyze\""+runmode_analyze+">analyze mols &amp; group<BR>")
+    +("&nbsp;<INPUT TYPE=RADIO NAME=\"runmode\" VALUE=\"1xN\""+runmode_1xN+">max common scaffolds (1xN)<BR>\n")
+    +("&nbsp;<INPUT TYPE=RADIO NAME=\"runmode\" VALUE=\"NxN\""+runmode_NxN+">max common scaffolds (NxN)<BR>\n")
     +("<B>output:</B><BR>\n")
-    +("&nbsp;<INPUT TYPE=CHECKBOX NAME=\"out_view\" VALUE=\"CHECKED\"")
-    +(" "+params.getVal("out_view")+">view table<BR>\n")
-    +("&nbsp;<INPUT TYPE=CHECKBOX NAME=\"out_batch\" VALUE=\"CHECKED\"")
-    +(" "+params.getVal("out_batch")+">batch<BR>\n")
+    +("&nbsp;<INPUT TYPE=CHECKBOX NAME=\"out_view\" VALUE=\"CHECKED\" "+params.getVal("out_view")+">view table<BR>\n")
+    +("&nbsp;<INPUT TYPE=CHECKBOX NAME=\"out_batch\" VALUE=\"CHECKED\" "+params.getVal("out_batch")+">batch<BR>\n")
     +("<B>depictions:</B><BR>\n")
     +("&nbsp;"+size_menu)
-    +("&nbsp;<INPUT TYPE=CHECKBOX NAME=\"showarom\" VALUE=\"CHECKED\"")
-    +(" "+params.getVal("showarom")+">showarom<BR>\n")
-    +("&nbsp; <INPUT TYPE=CHECKBOX NAME=\"show_js\" VALUE=\"CHECKED\"")
-    +(params.getVal("show_js")+">show attachments<BR>\n")
+    +("&nbsp;<INPUT TYPE=CHECKBOX NAME=\"showarom\" VALUE=\"CHECKED\" "+params.getVal("showarom")+">showarom<BR>\n")
+    +("&nbsp; <INPUT TYPE=CHECKBOX NAME=\"show_js\" VALUE=\"CHECKED\""+params.getVal("show_js")+">show attachments<BR>\n")
     +("<BR>\n")
     +("<B>misc:</B><BR>\n")
-    +("max mol size (atoms):<INPUT TYPE=TEXT SIZE=4 NAME=\"maxmol\" ")
-    +(" VALUE=\""+params.getVal("maxmol")+"\"><BR>\n")
-    +("<INPUT TYPE=CHECKBOX NAME=\"keep_nitro_attachments\" VALUE=\"CHECKED\"")
-    +(params.getVal("keep_nitro_attachments")+">keep nitro attachments<BR>\n")
-    +("<INPUT TYPE=CHECKBOX NAME=\"stereo\" VALUE=\"CHECKED\"")
-    +(params.getVal("stereo")+">stereo scaffolds<BR>\n")
-    +("<INPUT TYPE=CHECKBOX NAME=\"verbose\" VALUE=\"CHECKED\"")
-    +(" "+params.getVal("verbose")+">verbose<BR>\n")
+    +("max mol size (atoms):<INPUT TYPE=TEXT SIZE=4 NAME=\"maxmol\" VALUE=\""+params.getVal("maxmol")+"\"><BR>\n")
+    +("<INPUT TYPE=CHECKBOX NAME=\"keep_nitro_attachments\" VALUE=\"CHECKED\""+params.getVal("keep_nitro_attachments")+">keep nitro attachments<BR>\n")
+    +("<INPUT TYPE=CHECKBOX NAME=\"stereo\" VALUE=\"CHECKED\""+params.getVal("stereo")+">stereo scaffolds<BR>\n")
+    +("<INPUT TYPE=CHECKBOX NAME=\"verbose\" VALUE=\"CHECKED\" "+params.getVal("verbose")+">verbose<BR>\n")
     +("</TD></TR></TABLE>\n")
     +("<P>\n")
     +("<CENTER>\n")
     +("<BUTTON TYPE=BUTTON onClick=\"go_hscaf(this.form)\">\n")
-    +("<B>hier_scaffolds</B></BUTTON>\n")
+    +("<B>Go "+APPNAME+"</B></BUTTON>\n")
     +("</CENTER>\n")
     +("</FORM>\n");
     return htm;
@@ -505,10 +499,10 @@ public class hscaf_servlet extends HttpServlet
       {
         errors.add("Warning: multi-frag mol; analyzing largest frag only: ["+n_mol+"] "+molname);
         ++n_mol_frag;
-        mol=hier_scaffolds_utils.largestPart(mol);
+        mol=hier_scaffolds_utils.LargestPart(mol);
       }
 
-      int ring_count=hier_scaffolds_utils.rawRingsystemCount(mol);
+      int ring_count=hier_scaffolds_utils.RawRingsystemCount(mol);
       verbosetxt+=("\traw_ringsys_count: "+ring_count);
 
       Molecule outmol = new Molecule();
@@ -603,7 +597,7 @@ public class hscaf_servlet extends HttpServlet
     for (int i=1;i<scaftrees.size();++i)
     {
       Scaffold mcscaf=null;
-      if (scaftrees.get(i)!=null) mcscaf=hier_scaffolds_utils.maxCommonScaffold(scaftreeQ,scaftrees.get(i));
+      if (scaftrees.get(i)!=null) mcscaf=hier_scaffolds_utils.MaxCommonScaffold(scaftreeQ,scaftrees.get(i));
       mcscafs.add(mcscaf);
       if (mcscaf!=null) ++n_mcscaf;
     }
@@ -623,7 +617,7 @@ public class hscaf_servlet extends HttpServlet
       {
         Scaffold mcscaf=null;
         if (scaftrees.get(i)!=null && scaftrees.get(j)!=null)
-          mcscaf=hier_scaffolds_utils.maxCommonScaffold(scaftrees.get(i),scaftrees.get(j));
+          mcscaf=hier_scaffolds_utils.MaxCommonScaffold(scaftrees.get(i),scaftrees.get(j));
         mcscafs.add(mcscaf);
         if (mcscaf!=null) ++n_mcscaf;
       }
@@ -639,7 +633,7 @@ public class hscaf_servlet extends HttpServlet
       throws IOException,FileNotFoundException
   {
     // This is our convention; Apache proxies the 8080 port via /tomcat.
-    String mol2img_servleturl=("http://"+servername+"/tomcat"+contextpath+"/mol2img");
+    String mol2img_servleturl=("http://"+SERVERNAME+"/tomcat"+CONTEXTPATH+"/mol2img");
     int n_mol=0;
     int w=sizes_w.get(params.getVal("size"));
     int h=sizes_h.get(params.getVal("size"));
@@ -661,26 +655,26 @@ public class hscaf_servlet extends HttpServlet
       thtm+="<TR>\n";
       thtm+=("<TD VALIGN=TOP ALIGN=RIGHT>"+n_mol+".</TD>\n");
       String smiles=scaftree.inmol.exportToFormat(smifmt_dep);
-      String imghtm=HtmUtils.smi2ImgHtm(smiles,depopts,h-30,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
+      String imghtm=HtmUtils.Smi2ImgHtm(smiles,depopts,h-30,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
       thtm+=("<TD ALIGN=CENTER VALIGN=TOP>"+imghtm+"<BR>\n");
       thtm+=(molname.length()<35?molname:(molname.substring(0,31)+"...")+"</TD>\n");
       if (scaftree.getScaffoldCount()>0) {
         smiles=scaftree.getSmiForScaffoldsGroupmol(params.isChecked("show_js"));
-        imghtm=HtmUtils.smi2ImgHtm(smiles,depopts,h,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
+        imghtm=HtmUtils.Smi2ImgHtm(smiles,depopts,h,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
         thtm+=("<TD ALIGN=CENTER>"+imghtm+"</TD>\n");
       }
       else
         thtm+=("<TD ALIGN=CENTER>~</TD>\n");
       if (scaftree.getLinkerCount()>0) {
         smiles=scaftree.getSmiForLinkersGroupmol(params.isChecked("show_js"));
-        imghtm=HtmUtils.smi2ImgHtm(smiles,depopts,h,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
+        imghtm=HtmUtils.Smi2ImgHtm(smiles,depopts,h,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
         thtm+=("<TD ALIGN=CENTER>"+imghtm+"</TD>\n");
       }
       else
         thtm+=("<TD ALIGN=CENTER>~</TD>\n");
       if (scaftree.getSidechainCount()>0) {
         smiles=scaftree.getSmiForSidechainsGroupmol(params.isChecked("show_js"));
-        imghtm=HtmUtils.smi2ImgHtm(smiles,depopts,h,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
+        imghtm=HtmUtils.Smi2ImgHtm(smiles,depopts,h,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
         thtm+=("<TD ALIGN=CENTER>"+imghtm+"</TD>\n");
       }
       else
@@ -703,17 +697,17 @@ public class hscaf_servlet extends HttpServlet
         "<INPUT TYPE=HIDDEN NAME=\"downloadfile\" VALUE=\""+fout_scaf.getAbsolutePath()+"\">\n"+
         "<INPUT TYPE=HIDDEN NAME=\"fname\" VALUE=\""+fname+"\">\n"+
         "<BUTTON TYPE=BUTTON onClick=\"this.form.submit()\">"+
-        "download "+fname+" ("+HtmUtils.niceBytes(fout_scaf.length())+")</BUTTON></FORM>\n");
+        "download "+fname+" ("+file_utils.NiceBytes(fout_scaf.length())+")</BUTTON></FORM>\n");
       fname=(SERVLETNAME+"_out.smi");
       outputs.add("&nbsp;"+
         "<FORM METHOD=\"POST\" ACTION=\""+response.encodeURL(SERVLETNAME)+"\">\n"+
         "<INPUT TYPE=HIDDEN NAME=\"downloadfile\" VALUE=\""+fout.getAbsolutePath()+"\">\n"+
         "<INPUT TYPE=HIDDEN NAME=\"fname\" VALUE=\""+fname+"\">\n"+
         "<BUTTON TYPE=BUTTON onClick=\"this.form.submit()\">"+
-        "download "+fname+" ("+HtmUtils.niceBytes(fout.length())+")</BUTTON></FORM>\n");
+        "download "+fname+" ("+file_utils.NiceBytes(fout.length())+")</BUTTON></FORM>\n");
     }
     PrintWriter out_log=new PrintWriter(new BufferedWriter(new FileWriter(logfile,true)));
-    out_log.printf("%s\t%s\t%d\n",datestr,remotehost,n_mol); 
+    out_log.printf("%s\t%s\t%d\n",datestr,REMOTEHOST,n_mol); 
     out_log.close();
   }
   /////////////////////////////////////////////////////////////////////////////
@@ -723,7 +717,7 @@ public class hscaf_servlet extends HttpServlet
       throws IOException,FileNotFoundException
   {
     // This is our convention; Apache proxies the 8080 port via /tomcat.
-    String mol2img_servleturl=("http://"+servername+"/tomcat"+contextpath+"/mol2img");
+    String mol2img_servleturl=("http://"+SERVERNAME+"/tomcat"+CONTEXTPATH+"/mol2img");
     int n_mol=0;
     int w=sizes_w.get(params.getVal("size"));
     int h=sizes_h.get(params.getVal("size"));
@@ -736,14 +730,14 @@ public class hscaf_servlet extends HttpServlet
     thtm+=("<TR><TH></TH><TH>query</TH><TH>max common scaffold</TH><TH>mol</TH></TR>\n");
     String molnameQ=scaftrees.get(0).inmol.getName();
     String smilesQ=scaftrees.get(0).inmol.exportToFormat(smifmt_dep);
-    String imghtmQ=HtmUtils.smi2ImgHtm(smilesQ,depopts,h-30,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
+    String imghtmQ=HtmUtils.Smi2ImgHtm(smilesQ,depopts,h-30,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
     int n_total_scaf=0;
     for (int i=1;i<scaftrees.size();++i)
     {
       if (scaftrees.get(i)==null) continue;
       n_total_scaf+=scaftrees.get(i).getScaffoldCount();
       ++n_mol;
-      float sim=hier_scaffolds_utils.commonScaffoldTanimoto(scaftrees.get(0),scaftrees.get(i),mcscafs.get(i-1));
+      float sim=hier_scaffolds_utils.CommonScaffoldTanimoto(scaftrees.get(0),scaftrees.get(i),mcscafs.get(i-1));
       if (params.isChecked("verbose"))
         errors.add(String.format("scaffold Tanimoto (%d) = %.2f",i,sim));
       thtm+="<TR>\n";
@@ -753,7 +747,7 @@ public class hscaf_servlet extends HttpServlet
       if (mcscafs.size()>(i-1) && mcscafs.get(i-1)!=null)
       {
         String smiles_mcscaf=mcscafs.get(i-1).getSmi();
-        String imghtm_mcscaf=HtmUtils.smi2ImgHtm(smiles_mcscaf,depopts,h-30,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
+        String imghtm_mcscaf=HtmUtils.Smi2ImgHtm(smiles_mcscaf,depopts,h-30,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
         thtm+=("<TD ALIGN=CENTER VALIGN=TOP>"+imghtm_mcscaf+"<BR>\n");
         thtm+=(String.format("hscaf_Tanimoto = %.2f",sim)+"</TD>\n");
       }
@@ -761,7 +755,7 @@ public class hscaf_servlet extends HttpServlet
         thtm+=("<TD ALIGN=CENTER VALIGN=MIDDLE>~</TD>\n");
       String smiles=scaftrees.get(i).inmol.exportToFormat(smifmt_dep);
       String molname=scaftrees.get(i).inmol.getName();
-      String imghtm=HtmUtils.smi2ImgHtm(smiles,depopts,h-30,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
+      String imghtm=HtmUtils.Smi2ImgHtm(smiles,depopts,h-30,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
       thtm+=("<TD ALIGN=CENTER VALIGN=TOP>"+imghtm+"<BR>\n");
       thtm+=(molname.length()<35?molname:(molname.substring(0,31)+"...")+"</TD>\n");
       thtm+="</TR>\n";
@@ -777,7 +771,7 @@ public class hscaf_servlet extends HttpServlet
     if (params.isChecked("out_batch"))
       outputs.add("NOTE: 1xN batch output not yet supported.");
     PrintWriter out_log=new PrintWriter(new BufferedWriter(new FileWriter(logfile,true)));
-    out_log.printf("%s\t%s\t%d\n",datestr,remotehost,n_mol); 
+    out_log.printf("%s\t%s\t%d\n",datestr,REMOTEHOST,n_mol); 
     out_log.close();
   }
   /////////////////////////////////////////////////////////////////////////////
@@ -787,7 +781,7 @@ public class hscaf_servlet extends HttpServlet
       throws IOException,FileNotFoundException
   {
     // This is our convention; Apache proxies the 8080 port via /tomcat.
-    String mol2img_servleturl=("http://"+servername+"/tomcat"+contextpath+"/mol2img");
+    String mol2img_servleturl=("http://"+SERVERNAME+"/tomcat"+CONTEXTPATH+"/mol2img");
     int n_mol=0;
     int w=sizes_w.get(params.getVal("size"))/2;
     int h=sizes_h.get(params.getVal("size"))/2;
@@ -807,7 +801,7 @@ public class hscaf_servlet extends HttpServlet
         n_total_scaf+=scaftrees.get(i).getScaffoldCount();
         ++n_mol;
         smiles=scaftrees.get(i).inmol.exportToFormat(smifmt_dep);
-        imghtm=HtmUtils.smi2ImgHtm(smiles,depopts+"&bgcolor=%23DDDDDD",h,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
+        imghtm=HtmUtils.Smi2ImgHtm(smiles,depopts+"&bgcolor=%23DDDDDD",h,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
         thtm+=("<TD ALIGN=CENTER VALIGN=TOP>"+imghtm+"</TD>\n");
       }
       else
@@ -820,7 +814,7 @@ public class hscaf_servlet extends HttpServlet
       if (scaftrees.get(i)!=null)
       {
         smiles=scaftrees.get(i).inmol.exportToFormat(smifmt_dep);
-        imghtm=HtmUtils.smi2ImgHtm(smiles,depopts+"&bgcolor=%23DDDDDD",h,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
+        imghtm=HtmUtils.Smi2ImgHtm(smiles,depopts+"&bgcolor=%23DDDDDD",h,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
         thtm+=("<TD ALIGN=CENTER VALIGN=TOP>"+imghtm+"</TD>\n");
       }
       else
@@ -832,7 +826,7 @@ public class hscaf_servlet extends HttpServlet
           mcscaf=((i<j)?mcscaf_matrix.get(i).get(j):mcscaf_matrix.get(j).get(i));
         if (mcscaf!=null)
         {
-          imghtm=HtmUtils.smi2ImgHtm(mcscaf.getSmi(),depopts,h,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
+          imghtm=HtmUtils.Smi2ImgHtm(mcscaf.getSmi(),depopts,h,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
           thtm+=("<TD ALIGN=CENTER VALIGN=TOP>"+imghtm+"</TD>\n");
         }
         else
@@ -850,7 +844,7 @@ public class hscaf_servlet extends HttpServlet
     if (params.isChecked("out_batch"))
       outputs.add("NOTE: NxN batch output not yet supported.");
     PrintWriter out_log=new PrintWriter(new BufferedWriter(new FileWriter(logfile,true)));
-    out_log.printf("%s\t%s\t%d\n",datestr,remotehost,n_mol); 
+    out_log.printf("%s\t%s\t%d\n",datestr,REMOTEHOST,n_mol); 
     out_log.close();
   }
   /////////////////////////////////////////////////////////////////////////////
@@ -899,10 +893,13 @@ public class hscaf_servlet extends HttpServlet
   private static String helpHtm()
   {
     return (
-    "<B>"+SERVLETNAME+" help</B><P>\n"+
+    "<B>"+APPNAME+" help</B><P>\n"+
     "<P>\n"+
     "Built with package edu.unm.health.biocomp.hscaf.\n"+
-    "API documentation <A HREF=\"http://"+servername+"/tomcat/doc/hscaf/\">here</A>\n"+
+    "API documentation <A HREF=\"http://"+SERVERNAME+"/tomcat/doc/hscaf/\">here</A>\n"+
+    "<P>\n"+
+    "See GitHub repo: <a href=\"https://github.com/jeremyjyang/unm-biocomp-hscaf.\">UNM-Biocomp-HScaf</a>\n"+
+    "for more info.\n"+
     "<P>\n"+
     "configured with molecule limit N_MAX = "+N_MAX+"\n"+
     "<P>\n"+
@@ -915,16 +912,21 @@ public class hscaf_servlet extends HttpServlet
   public void init(ServletConfig conf) throws ServletException
   {
     super.init(conf);
+    CONTEXT=getServletContext();
+    CONTEXTPATH=CONTEXT.getContextPath();
+    //CONFIG=conf;
     // read servlet parameters (from web.xml):
+    try { APPNAME=conf.getInitParameter("APPNAME"); }
+    catch (Exception e) { APPNAME=this.getServletName(); }
     UPLOADDIR=conf.getInitParameter("UPLOADDIR");
     if (UPLOADDIR==null)
       throw new ServletException("Please supply UPLOADDIR parameter");
     SCRATCHDIR=conf.getInitParameter("SCRATCHDIR");
     if (SCRATCHDIR==null) SCRATCHDIR="/tmp";
+    LOGDIR=conf.getInitParameter("LOGDIR")+CONTEXTPATH;
+    if (LOGDIR==null) LOGDIR="/usr/local/tomcat/logs"+CONTEXTPATH;
     try { N_MAX=Integer.parseInt(conf.getInitParameter("N_MAX")); }
     catch (Exception e) { N_MAX=100; }
-    context=getServletContext();	// inherited method
-    config=conf;
   }
   /////////////////////////////////////////////////////////////////////////////
   public void doGet(HttpServletRequest request,HttpServletResponse response)

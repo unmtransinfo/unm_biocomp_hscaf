@@ -21,14 +21,14 @@ import edu.unm.health.biocomp.util.*;
 
 /**	HierS hierarchical scaffolds application.  Run program with
 	no args for command-line help.
-	<br />
+	<br>
 	For each molecule in the input dataset, scaffolds are perceived, including the hierarchical
 	scaffold tree, and a set of unique scaffolds for the dataset is generated, with IDs assigned
 	sequentially.
 	The output molecule file is annotated with scaffold IDs.
 	The output scaffold file is annotated with scaffold IDs and scaffold hierarchy tree
 	(encoded as string)..
-	<br />
+	<br>
 	@author Jeremy J Yang
 	@see edu.unm.health.biocomp.hscaf.ScaffoldTree
 	@see edu.unm.health.biocomp.hscaf.Scaffold
@@ -77,6 +77,12 @@ public class hier_scaffolds
   private static String rdb_tableprefix="";
   private static Integer rdb_reindex_per=5000;
 
+  private static Boolean ddb=false;
+  private static Boolean ddb_keep=false;
+  private static Boolean ddb_resume=false;
+  private static Boolean ddb_predelete=false;
+  private static String ddb_dump=null;
+
   private static int maxatoms=100;
   private static int maxrings=10;
   private static int nmax=0;
@@ -84,31 +90,30 @@ public class hier_scaffolds
   //private static String db_preload=null;
   private static String smifmt="cxsmiles:u-L-l-e-d-D-p-R-f-w";
   private static String bdb_dir="/tmp/hscaf";
+  private static String ddb_dir="/tmp/hscaf";
 
-  private static void help(String msg)
+  private static void Help(String msg)
   {
     System.err.println(msg+"\n"
       +"hier_scaffolds - HierS scaffolds analyzer\n"
       +"\n"
-      +"From the University of New Mexico Translational Informatics Division\n"
-      +"(http://medicine.unm.edu/informatics/).\n"
+      +"From the UNM Translational Informatics Division\n"
       +"\n"
       +"usage: hier_scaffolds [options]\n"
       +"\n"
-      +"  required:\n"
+      +"required:\n"
       +"    -i IFILE .................. input file of molecules\n"
-      +"    -o OFILE .................. one (possibly) disconnected mol of parts per input mol\n"
       +"  or\n"
       +"    -bdb_dump OUTSCAFS ........ dump existing BerkeleyDB at BDBDIR\n"
       +"  or\n"
       +"    -rdb_dump OUTSCAFS ........ dump existing RDB\n"
       +"\n"
-      +"  options:\n"
-      +"\n"
+      +"options:\n"
       +"  Algorithm:\n"
       +"    -keep_nitro_attachments ... atoms single bonded to ring N remain in scaffold\n"
       +"    -stereo ................... stereo scaffolds (default non-stereo)\n"
       +"  I/O:\n"
+      +"    -o OFILE .................. one (possibly) disconnected mol of parts per input mol\n"
       +"    -out_scaf OUTSCAFS ........ unique scafs numbered sequentially (new + db)\n"
       +"    -inc_mol .................. include mols in output (-o)\n"
       +"    -inc_scaf ................. include scaffolds in output (-o)\n"
@@ -118,12 +123,6 @@ public class hier_scaffolds
       +"    -scaflist_append2title .... scaf/link/chain list appended to title\n"
       +"    -scaflist_sdtag SDTAG ..... scaf list written to SD dataitem\n"
       +"    -append2ofile ............. output mols appended to -o OFILE (resume mode)\n"
-      +"  BerkeleyDB:\n"
-      +"    -bdb ...................... use BerkeleyDB for storage and performance\n"
-      +"    -bdb_dir BDBDIR ........... scratch dir for BerkeleyDB files ["+bdb_dir+"]\n"
-      +"    -bdb_keep ................. keep BerkeleyDB files after job completion\n"
-      +"    -bdb_predelete ............ initially delete BerkeleyDB at BDBDIR (if existing)\n"
-      +"    -bdb_resume ............... resume job using existing BerkeleyDB\n"
       +"  RDB:\n"
       +"    -rdb ...................... use RDB for storage and performance\n"
       +"    -rdb_keep ................. keep RDB tables after job completion\n"
@@ -133,10 +132,22 @@ public class hier_scaffolds
       +"    -rdb_port DBPORT .......... RDB port ["+rdb_port+"]\n"
       +"    -rdb_name DBNAME .......... RDB db name\n"
       +"    -rdb_schema DBSCHEMA ...... RDB db schema ["+rdb_schema+"]\n"
-      +"    -rdb_user DBUSER .......... RDB db user [$USER]\n"
+      +"    -rdb_user DBUSER .......... RDB db user ["+rdb_user+"]\n"
       +"    -rdb_pw DBPW .............. RDB db password\n"
       +"    -rdb_tableprefix PREFIX ... RDB db table prefix\n"
       +"    -rdb_reindex_per N ........ RDB reindex once per N mols ["+rdb_reindex_per+"]\n"
+      +"  BerkeleyDB:\n"
+      +"    -bdb ...................... use BerkeleyDB for storage and performance\n"
+      +"    -bdb_dir BDBDIR ........... scratch dir for BerkeleyDB files ["+bdb_dir+"]\n"
+      +"    -bdb_keep ................. keep BerkeleyDB files after job completion\n"
+      +"    -bdb_predelete ............ initially delete BerkeleyDB at BDBDIR (if existing)\n"
+      +"    -bdb_resume ............... resume job using existing BerkeleyDB\n"
+      +"  DerbyDB:\n"
+      +"    -ddb ...................... use DerbyDB for storage and performance\n"
+      +"    -ddb_dir DDBDIR ........... scratch dir for DerbyDB files ["+ddb_dir+"]\n"
+      +"    -ddb_keep ................. keep DerbyDB files after job completion\n"
+      +"    -ddb_predelete ............ initially delete DerbyDB at DDBDIR (if existing)\n"
+      +"    -ddb_resume ............... resume job using existing DerbyDB\n"
       +"  Misc:\n"
       +"    -maxatoms MAX ............. max atom count of input mol ["+maxatoms+"]\n"
       +"    -maxrings MAX ............. max ring count of input mol ["+maxrings+"]\n"
@@ -148,11 +159,12 @@ public class hier_scaffolds
       +"    -vv ....................... very verbose\n"
       +"    -vvv or -debug ............ very very verbose (slows process)\n"
       +"    -h ........................ this help\n");
+    if (verbose>1)
+      System.err.println("JChem version: "+com.chemaxon.version.VersionInfo.getVersion());
     System.exit(1);
   }
-
   /////////////////////////////////////////////////////////////////////////////
-  private static void parseCommand(String args[])
+  private static void ParseCommand(String args[])
   {
     for (int i=0;i<args.length;++i)
     {
@@ -173,13 +185,6 @@ public class hier_scaffolds
       else if (args[i].equals("-maxatoms") || args[i].equals("-maxmol")) maxatoms=Integer.parseInt(args[++i]);
       else if (args[i].equals("-maxrings")) maxrings=Integer.parseInt(args[++i]);
 
-      else if (args[i].equals("-bdb")) bdb=true;
-      else if (args[i].equals("-bdb_dir")) bdb_dir=args[++i];
-      else if (args[i].equals("-bdb_keep")) bdb_keep=true;
-      else if (args[i].equals("-bdb_resume")) bdb_resume=true;
-      else if (args[i].equals("-bdb_predelete")) bdb_predelete=true;
-      else if (args[i].equals("-bdb_dump")) bdb_dump=args[++i];
-
       else if (args[i].equals("-rdb")) rdb=true;
       else if (args[i].equals("-rdb_keep")) rdb_keep=true;
       else if (args[i].equals("-rdb_resume")) rdb_resume=true;
@@ -194,32 +199,45 @@ public class hier_scaffolds
       else if (args[i].equals("-rdb_tableprefix")) rdb_tableprefix=args[++i];
       else if (args[i].equals("-rdb_reindex_per")) rdb_reindex_per=Integer.parseInt(args[++i]);
 
+      else if (args[i].equals("-bdb")) bdb=true;
+      else if (args[i].equals("-bdb_dir")) bdb_dir=args[++i];
+      else if (args[i].equals("-bdb_keep")) bdb_keep=true;
+      else if (args[i].equals("-bdb_resume")) bdb_resume=true;
+      else if (args[i].equals("-bdb_predelete")) bdb_predelete=true;
+      else if (args[i].equals("-bdb_dump")) bdb_dump=args[++i];
+
+      else if (args[i].equals("-ddb")) ddb=true;
+      else if (args[i].equals("-ddb_dir")) ddb_dir=args[++i];
+      else if (args[i].equals("-ddb_keep")) ddb_keep=true;
+      else if (args[i].equals("-ddb_resume")) ddb_resume=true;
+      else if (args[i].equals("-ddb_predelete")) ddb_predelete=true;
+      else if (args[i].equals("-ddb_dump")) ddb_dump=args[++i];
+
       else if (args[i].equals("-nmax")) nmax=Integer.parseInt(args[++i]);
       else if (args[i].equals("-nskip")) nskip=Integer.parseInt(args[++i]);
       //else if (args[i].equals("-db_preload")) db_preload=args[++i];
       else if (args[i].equals("-v")) verbose=1;
       else if (args[i].equals("-vv")) verbose=2;
       else if (args[i].equals("-vvv") || args[i].equals("-debug")) verbose=3;
-      else if (args[i].equals("-h")) help("");
-      else help("Unknown option: "+args[i]);
+      else if (args[i].equals("-h")) Help("");
+      else Help("Unknown option: "+args[i]);
     }
   }
   /////////////////////////////////////////////////////////////////////////////
   public static void main(String[] args)
     throws IOException,DatabaseException
   {
-    parseCommand(args);
+    ParseCommand(args);
 
     /// Mode of operation:
-
     if (bdb_dump!=null)
     {
       if (ifile!=null || ofile!=null || ofile_scaf!=null)
-        help("ERROR: -i, -o, -o_scaf incompatible with -bdb_dump.");
+        Help("ERROR: -i, -o, -o_scaf incompatible with -bdb_dump.");
       if (!bdb)
-        help("ERROR: -bdb_dump requires -bdb.");
+        Help("ERROR: -bdb_dump requires -bdb.");
       if (bdb_resume || bdb_predelete)
-        help("ERROR: -bdb_resume, -bdb_predelete incompatible with -bdb_dump.");
+        Help("ERROR: -bdb_resume, -bdb_predelete incompatible with -bdb_dump.");
       if (verbose>0) System.err.println("Dumping scaffold store at: "+bdb_dir);
 
       File bdbDir = new File(bdb_dir);
@@ -232,11 +250,11 @@ public class hier_scaffolds
     else if (rdb_dump!=null)
     {
       if (ifile!=null || ofile!=null || ofile_scaf!=null)
-        help("ERROR: -i, -o, -o_scaf incompatible with -rdb_dump.");
+        Help("ERROR: -i, -o, -o_scaf incompatible with -rdb_dump.");
       if (!rdb)
-        help("ERROR: -rdb_dump requires -rdb.");
+        Help("ERROR: -rdb_dump requires -rdb.");
       if (rdb_resume || rdb_predelete)
-        help("ERROR: -rdb_resume, -rdb_predelete incompatible with -rdb_dump.");
+        Help("ERROR: -rdb_resume, -rdb_predelete incompatible with -rdb_dump.");
 
       if (verbose>0) System.err.println("Dumping scaffold DB: "+rdb_host);
       ScaffoldDB scafdb = null;
@@ -254,42 +272,50 @@ public class hier_scaffolds
       System.exit(0);
     }
 
-    if (ifile==null) help("Input file required.");
+    if (ifile==null) Help("Input file required.");
+
+    if (verbose>1)
+      System.err.println("JChem version: "+com.chemaxon.version.VersionInfo.getVersion());
+      //System.err.println("JChem version: "+chemaxon.jchem.version.VersionInfo.JCHEM_VERSION); //pre-v6.3
 
     if (bdb_resume && bdb_predelete)
-      help("ERROR: -bdb_resume and -bdb_predelete incompatible.");
+      Help("ERROR: -bdb_resume and -bdb_predelete incompatible.");
     if (bdb_resume && !bdb)
-      help("ERROR: -bdb_resume requires -bdb.");
+      Help("ERROR: -bdb_resume requires -bdb.");
     if ((bdb_resume||bdb_keep||bdb_predelete) && !bdb)
-      help("ERROR: -bdb_resume|-bdb_keep|-bdb_predelete require -bdb.");
+      Help("ERROR: -bdb_resume|-bdb_keep|-bdb_predelete require -bdb.");
     if (rdb_resume && rdb_predelete)
-      help("ERROR: -rdb_resume and -rdb_predelete incompatible.");
+      Help("ERROR: -rdb_resume and -rdb_predelete incompatible.");
     if (rdb_resume && !rdb)
-      help("ERROR: -rdb_resume requires -rdb.");
+      Help("ERROR: -rdb_resume requires -rdb.");
     if ((rdb_host!=null ||rdb_name!=null) && !rdb)
-      help("ERROR: -rdb_host|-rdb_name require -rdb.");
+      Help("ERROR: -rdb_host|-rdb_name require -rdb.");
     if ((rdb_user!=null ||rdb_pw!=null) && !rdb)
-      help("ERROR: -rdb_user|-rdb_pw require -rdb.");
+      Help("ERROR: -rdb_user|-rdb_pw require -rdb.");
     if ((rdb_resume||rdb_keep||rdb_predelete) && !rdb)
-      help("ERROR: -rdb_resume|-rdb_keep|-rdb_predelete require -rdb.");
+      Help("ERROR: -rdb_resume|-rdb_keep|-rdb_predelete require -rdb.");
     if (append2ofile && !bdb_resume && !rdb_resume)
-      help("ERROR: -append2ofile requires -bdb_resume or -rdb_resume.");
+      Help("ERROR: -append2ofile requires -bdb_resume or -rdb_resume.");
     //if (db_preload!=null && !rdb && !bdb)
-    //  help("ERROR: -db_preload requires -rdb or -bdb.");
+    //  Help("ERROR: -db_preload requires -rdb or -bdb.");
     //if (db_preload!=null && (rdb_resume || bdb_resume))
-    //  help("ERROR: -db_preload incompatible w/ -rdb_resume, -bdb_resume.");
+    //  Help("ERROR: -db_preload incompatible w/ -rdb_resume, -bdb_resume.");
 
-    if (!(new File(ifile).exists())) help("Non-existent input file: "+ifile);
+    if (!(new File(ifile).exists())) Help("Non-existent input file: "+ifile);
     MolImporter molReader = new MolImporter(ifile);
 
     MolExporter molWriter=null;
     if (ofile!=null)
     {
       if (!inc_mol && !inc_scaf && !inc_link && !inc_chain)
-        help("-o requires one or more of: -inc_mol, inc_scaf, inc_link, inc_chain");
+        Help("-o requires one or more of: -inc_mol, inc_scaf, inc_link, inc_chain");
       String ofmt=MFileFormatUtil.getMostLikelyMolFormat(ofile);
       if (ofmt.equals("smiles")) ofmt="smiles:+n-a-H"; //Kekule for compatibility, H-implicitized
       molWriter=new MolExporter(new FileOutputStream(ofile,append2ofile),ofmt);
+    }
+    else
+    {
+      molWriter=new MolExporter(System.out,"smiles:+n-a-H");
     }
     MolExporter molWriter_scaf=null;
     if (ofile_scaf!=null)
@@ -298,14 +324,15 @@ public class hier_scaffolds
       if (ofmt.equals("smiles")) ofmt="smiles:+n-a-H"; //Kekule for compatibility, H-implicitized
       molWriter_scaf=new MolExporter(new FileOutputStream(ofile_scaf),ofmt);
     }
-
-    if (verbose>1)
-      System.err.println("JChem version: "+chemaxon.jchem.version.VersionInfo.JCHEM_VERSION);
+    else
+    {
+      molWriter_scaf=new MolExporter(System.out,"smiles:+n-a-H");
+    }
 
     ScaffoldStore scafstore=null; // ScaffoldStore stores global unique scafs in BerkeleyDB.
     File bdbDir=null;
 
-    ScaffoldDB scafdb=null; // ScaffoldStore stores global unique scafs in RDB.
+    ScaffoldDB scafdb=null; // ScaffoldDB stores global unique scafs in RDB.
     Connection rdb_con=null;
 
     long n_db_scaf_init=0L; // Used by bdb or rdb.
@@ -337,7 +364,7 @@ public class hier_scaffolds
       if (n_db_scaf_init>0)
       {
         if (!bdb_resume)
-          help("ERROR: Non-empty scratch DB at \""+bdb_dir+"\" (n_scafs="+n_db_scaf_init+") requires -bdb_resume or -bdb_predelete.");
+          Help("ERROR: Non-empty scratch DB at \""+bdb_dir+"\" (n_scafs="+n_db_scaf_init+") requires -bdb_resume or -bdb_predelete.");
         else
           System.err.println("Non-empty scratch DB at \""+bdb_dir+"\" (n_scafs="+n_db_scaf_init+").");
         if (verbose>0)
@@ -347,13 +374,13 @@ public class hier_scaffolds
     else if (rdb)
     {
       try {
-        rdb_con=pg_utils.dbConnect(rdb_host,rdb_port,rdb_name,rdb_user,rdb_pw);
+        rdb_con=pg_utils.DBConnect(rdb_host,rdb_port,rdb_name,rdb_user,rdb_pw);
         if (rdb_con==null)
-          help("RDB connection failed.");
+          Help("RDB connection failed.");
         if (verbose>1)
         {
           System.err.println("PostgreSQL connection ok ("+rdb_host+":"+rdb_port+"/"+rdb_name+").");
-          System.err.println(pg_utils.serverStatusTxt(rdb_con));
+          System.err.println(pg_utils.ServerStatusTxt(rdb_con));
         }
         if (rdb_resume)
         {
@@ -383,21 +410,21 @@ public class hier_scaffolds
           if (verbose>0)
             System.err.println("Scaffold DB created: "+rdb_host+":"+rdb_port+"/"+rdb_name+" (tableprefix: \""+rdb_tableprefix+"\")");
         }
-        if (scafdb==null || !scafdb.checkValid()) help("ERROR: scafdb initialization failed.");
+        if (scafdb==null || !scafdb.checkValid()) Help("ERROR: scafdb initialization failed.");
 
         // Check for existing contents of scafdb:
         n_db_scaf_init=scafdb.count();
         if (n_db_scaf_init>0)
         {
           if (!rdb_resume)
-            help("ERROR: Non-empty RDB (n_scafs="+n_db_scaf_init+") requires -rdb_resume or -rdb_predelete.");
+            Help("ERROR: Non-empty RDB (n_scafs="+n_db_scaf_init+") requires -rdb_resume or -rdb_predelete.");
           else
             System.err.println("Non-empty RDB (n_scafs="+n_db_scaf_init+").");
           if (verbose>0)
             System.err.println("scafdb.info:\n"+scafdb.info());
         }
       }
-      catch (SQLException e) { help("SQLException: "+e.getMessage()); }
+      catch (SQLException e) { Help("SQLException: "+e.getMessage()); }
       if (verbose>0)
         System.err.println("database: "+rdb_host+":"+rdb_port+":"+rdb_name+":"+rdb_schema);
     }
@@ -457,9 +484,9 @@ public class hier_scaffolds
         if (verbose>1)
           System.err.println("Warning: multi-frag mol; analyzing largest frag only: ["+n_mol+"] "+molname);
         ++n_mol_frag;
-        mol=hier_scaffolds_utils.largestPart(mol);
+        mol=hier_scaffolds_utils.LargestPart(mol);
       }
-      int ring_count=hier_scaffolds_utils.rawRingsystemCount(mol);
+      int ring_count=hier_scaffolds_utils.RawRingsystemCount(mol);
       if (verbose>1)
       {
         System.err.println("\traw_ringsys_count: "+ring_count);
@@ -484,6 +511,7 @@ public class hier_scaffolds
       }
       java.util.Date t_this_0 = new java.util.Date();
       ScaffoldTree scaftree=null;
+      //System.err.println("DEBUG: ScaffoldTree() next...");
       try {
         if (rdb)
           scaftree = new ScaffoldTree(mol,stereo,keep_nitro_attachments,scafdb); //scafIDs assigned.
@@ -494,7 +522,8 @@ public class hier_scaffolds
       }
       catch (Exception e) {
         ++n_err;
-        System.err.println(e.getMessage());
+        //System.err.println(e.getMessage());
+        System.err.println("DEBUG: ScaffoldTree() Exception: "+e.toString());
         ok=false;
       }
       if (!ok)
@@ -519,6 +548,7 @@ public class hier_scaffolds
         if (verbose>2)
         {
           System.err.println("\tscaf: "+n_scaf+". "+(show_js?scaf.getJsmi():scaf.getCansmi()));
+          //System.err.println("\tDEBUG: "+hscaf_utils.ScaffoldSmarts(scaf));
           System.err.print("\t\tID="+(scaf.getID()));
           System.err.print(" cIDs="+scaf.getChildIDs());
           System.err.print(scaf.isRoot()?" (root)":"");
@@ -564,13 +594,13 @@ public class hier_scaffolds
           outmol.fuse(chain.cloneMolecule(),true);
       }
       if (verbose>1)
-        System.err.println("\tt_this: "+time_utils.timeDeltaStr(t_this_0,new java.util.Date()));
+        System.err.println("\tt_this: "+time_utils.TimeDeltaStr(t_this_0,new java.util.Date()));
       if (ofile!=null) { if (!WriteMol(molWriter,outmol)) ++n_err; }
       if (verbose>0 && n_mol%n_chunk==0)
       {
-        System.err.print(" mols: "+n_mol+"; errors: "+n_err+": tod: "+time_utils.currentTime());
+        System.err.print(" mols: "+n_mol+"; errors: "+n_err+": tod: "+time_utils.CurrentTime());
         java.util.Date t_j = new java.util.Date();
-        System.err.print("; elapsed: "+time_utils.timeDeltaStr(t_0,t_j)+"; dt: "+time_utils.timeDeltaStr(t_i,t_j));
+        System.err.print("; elapsed: "+time_utils.TimeDeltaStr(t_0,t_j)+"; dt: "+time_utils.TimeDeltaStr(t_i,t_j));
         System.err.println("; @: \""+molname+"\"");
         t_i=t_j;
       }
@@ -589,7 +619,7 @@ public class hier_scaffolds
       for (long scaf_id=1L;true;++scaf_id)
       {
         String scafsmi=null;
-        ScaffoldEntity scent=null;
+        ScaffoldStoreEntity scent=null;
         try {
           scent=scafstore.scaffoldById.get(scaf_id);
           scafsmi=scent.getCanSmi();
@@ -602,7 +632,8 @@ public class hier_scaffolds
           Molecule scafmol=null;
           try { scafmol=MolImporter.importMol(scafsmi,"smiles:"); }
           catch (Exception e) {
-          System.err.println(e.getMessage());
+          //System.err.println(e.getMessage());
+          System.err.println(e.toString());
             ++n_err;
           }
           if (scafmol==null)
@@ -620,7 +651,7 @@ public class hier_scaffolds
     {
       String sql="SELECT id,scafsmi,scaftree FROM "+scafdb.getDBSchema()+"."+scafdb.getDBTableprefix()+"scaffold ORDER BY id ASC";
       try {
-        ResultSet rset=pg_utils.executeSql(rdb_con,sql);
+        ResultSet rset=pg_utils.ExecuteSql(rdb_con,sql);
         while (rset.next())
         {
           String scafsmi=rset.getString("scafsmi");
@@ -633,7 +664,8 @@ public class hier_scaffolds
             Molecule scafmol=null;
             try { scafmol=MolImporter.importMol(scafsmi,"smiles:"); }
             catch (Exception e) {
-            System.err.println(e.getMessage());
+              //System.err.println(e.getMessage());
+              System.err.println(e.toString());
               ++n_err;
             }
             if (scafmol==null)
@@ -706,7 +738,7 @@ public class hier_scaffolds
     }
     molWriter_scaf.close();
     molWriter.close();
-    System.err.println("Total elapsed time: "+time_utils.timeDeltaStr(t_0,new java.util.Date()));
+    System.err.println("Total elapsed time: "+time_utils.TimeDeltaStr(t_0,new java.util.Date()));
     if (verbose>0)
       System.err.println(DateFormat.getDateTimeInstance().format(new java.util.Date()));
     System.err.println("Total input mols: "+n_mol);
@@ -729,11 +761,10 @@ public class hier_scaffolds
   /////////////////////////////////////////////////////////////////////////////
   private static boolean WriteMol(MolExporter molWriter,Molecule mol)
   {
-    try {
-      molWriter.write(mol);
-    }
+    try { molWriter.write(mol); }
     catch (Exception e) {
-      System.err.println(e.getMessage());
+      //System.err.println(e.getMessage());
+      System.err.println(e.toString());
       return false;
     }
     return true;

@@ -18,10 +18,10 @@ import chemaxon.marvin.io.MolExportException;
 	Child scaffolds are not separate instances but rather among the set and may be shared.
 	Developer note: scafhash and idhash contain references to the same Scaffold objects, 
 	thereby conserving memory.
-	<br />
+	<br>
 	Note that the ScaffoldStore class is an alternative utilizing BerkeleyDB for
 	improved performance and memory management for large datasets.
-	<br />
+	<br>
 	@see edu.unm.health.biocomp.hscaf.Scaffold
 	@see edu.unm.health.biocomp.hscaf.ScaffoldTree
 	@see edu.unm.health.biocomp.hscaf.hier_scaffolds_utils

@@ -11,6 +11,8 @@ import chemaxon.sss.*;
 import chemaxon.sss.search.*;
 import chemaxon.util.MolHandler;
 import chemaxon.marvin.io.MolExportException;
+
+import com.sleepycat.je.DatabaseException;
  
 import edu.unm.health.biocomp.hscaf.*;
 import edu.unm.health.biocomp.db.*;
@@ -31,7 +33,7 @@ public class hier_scaffolds_utils
   /**	Finds maximum common scaffold in two ScaffoldTrees.
 	If none returns null.
   */
-  public static Scaffold maxCommonScaffold(ScaffoldTree scaftreeA,ScaffoldTree scaftreeB)
+  public static Scaffold MaxCommonScaffold(ScaffoldTree scaftreeA,ScaffoldTree scaftreeB)
   {
     ArrayList<Scaffold> scafsA = scaftreeA.getScaffolds();
     ArrayList<Scaffold> scafsB = scaftreeB.getScaffolds();
@@ -65,18 +67,18 @@ public class hier_scaffolds_utils
   /**	Finds maximum common scaffold in two molecules.
 	If none returns null.
   */
-  public static Scaffold maxCommonScaffold(Molecule molA,Molecule molB,
+  public static Scaffold MaxCommonScaffold(Molecule molA,Molecule molB,
 	boolean stereo,boolean keep_nitro_attachments,ScaffoldSet scafset)
-	throws IOException,SearchException,MolFormatException,MolExportException,ScaffoldException
+	throws IOException,SearchException,MolFormatException,MolExportException,ScaffoldException,SQLException,DatabaseException
   {
     ScaffoldTree scaftreeA = new ScaffoldTree(molA,stereo,keep_nitro_attachments,scafset);
     ScaffoldTree scaftreeB = new ScaffoldTree(molB,stereo,keep_nitro_attachments,scafset);
-    return maxCommonScaffold(scaftreeA,scaftreeB);
+    return MaxCommonScaffold(scaftreeA,scaftreeB);
   }
   ///////////////////////////////////////////////////////////////////////////
   /**	@return	largest fragment of fragmented molecule
   */
-  public static Molecule largestPart(Molecule mol)
+  public static Molecule LargestPart(Molecule mol)
   {
     Molecule[] partmols=mol.convertToFrags();
     int i_largest=0;
@@ -103,9 +105,9 @@ public class hier_scaffolds_utils
 	with a standard whole-molecule similarity metric.
   	@return	similarity metric
   */
-  public static float commonScaffoldTanimoto(ScaffoldTree scaftreeA,ScaffoldTree scaftreeB)
+  public static float CommonScaffoldTanimoto(ScaffoldTree scaftreeA,ScaffoldTree scaftreeB)
   {
-    Scaffold mcScaf=maxCommonScaffold(scaftreeA,scaftreeB);
+    Scaffold mcScaf=MaxCommonScaffold(scaftreeA,scaftreeB);
     if (mcScaf==null) return 0.0f;
     int nc=mcScaf.getAtomCount();
     int nA=scaftreeA.getRootScaffold().getAtomCount();
@@ -115,13 +117,13 @@ public class hier_scaffolds_utils
   }
   /**	
   */
-  public static float commonScaffoldTanimoto(Molecule molA,Molecule molB,
+  public static float CommonScaffoldTanimoto(Molecule molA,Molecule molB,
 	boolean stereo,boolean keep_nitro_attachments,ScaffoldSet scafset)
-	throws IOException,SearchException,MolFormatException,MolExportException,ScaffoldException
+	throws IOException,SearchException,MolFormatException,MolExportException,ScaffoldException,SQLException,DatabaseException
   {
     ScaffoldTree scaftreeA = new ScaffoldTree(molA,stereo,keep_nitro_attachments,scafset);
     ScaffoldTree scaftreeB = new ScaffoldTree(molB,stereo,keep_nitro_attachments,scafset);
-    return commonScaffoldTanimoto(scaftreeA,scaftreeB);
+    return CommonScaffoldTanimoto(scaftreeA,scaftreeB);
   }
   ///////////////////////////////////////////////////////////////////////////
   /**	Similarity metric designed to reflect the significance of
@@ -136,10 +138,10 @@ public class hier_scaffolds_utils
 	</tt>
 	This is an experimental functionality.  For use in combination
 	with a standard whole-molecule similarity metric.
-	Use this faster method if mcScaf is already calculated (with maxCommonScaffold()).
+	Use this faster method if mcScaf is already calculated (with MaxCommonScaffold()).
   	@return	similarity metric
   */
-  public static float commonScaffoldTanimoto(ScaffoldTree scaftreeA,ScaffoldTree scaftreeB,
+  public static float CommonScaffoldTanimoto(ScaffoldTree scaftreeA,ScaffoldTree scaftreeB,
     Scaffold mcScaf)
   {
     if (mcScaf==null) return 0.0f;
@@ -156,7 +158,7 @@ public class hier_scaffolds_utils
 	"pathological" molecules for special handling.
   	@return simple count of all ringsystems
   */
-  public static int rawRingsystemCount(Molecule mol)
+  public static int RawRingsystemCount(Molecule mol)
   {
     Molecule xmol = mol.cloneMolecule();
     int [][] sssratoms=xmol.getSSSR();
@@ -269,11 +271,11 @@ public class hier_scaffolds_utils
 	String dbtableprefix)
         throws SQLException
   {
-    Connection dbcon=pg_utils.dbConnect(dbhost,dbport,dbname,dbusr,dbpw);
+    Connection dbcon=pg_utils.DBConnect(dbhost,dbport,dbname,dbusr,dbpw);
     boolean ok=true;
     if (dbcon==null) return false;
     String sql="SELECT DISTINCT table_name FROM information_schema.tables WHERE table_schema='"+dbschema+"' AND table_name IN ('"+dbtableprefix+"scaffold','"+dbtableprefix+"scaf2scaf')";
-    ResultSet rset=pg_utils.executeSql(dbcon,sql);
+    ResultSet rset=pg_utils.ExecuteSql(dbcon,sql);
     long rowcount=0L;
     while (rset.next()) ++rowcount;
     rset.getStatement().close();

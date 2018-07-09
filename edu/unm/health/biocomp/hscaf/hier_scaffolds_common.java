@@ -14,7 +14,7 @@ import chemaxon.marvin.io.MolExportException;
 	Query input file is one molecule.  Query is compared with each molecule from dataset input file,
 	and common scaffolds are written to output.  Also the scaffold-based Tanimoto similarity
 	value is computed.
-	<br />
+	<br>
 	@author Jeremy J Yang
 	@see edu.unm.health.biocomp.hscaf.ScaffoldTree
 	@see edu.unm.health.biocomp.hscaf.Scaffold
@@ -97,8 +97,9 @@ public class hier_scaffolds_common
       molWriter=new MolExporter(new FileOutputStream(ofile),ofmt);
     }
 
-    if (verbose>0)
-      System.err.println("JChem version: "+chemaxon.jchem.version.VersionInfo.JCHEM_VERSION);
+    //if (verbose>0)
+      //System.err.println("JChem version: "+chemaxon.jchem.version.VersionInfo.JCHEM_VERSION);
+      //System.err.println("JChem version: "+com.chemaxon.version.VersionInfo.getVersion()); //v6.3+
 
     //First analyze query mol.
     Molecule molQ=null;
@@ -117,7 +118,7 @@ public class hier_scaffolds_common
     if (molQ.getFragCount(MoleculeGraph.FRAG_BASIC)>1)
     {
       System.err.println("Warning: multi-frag query mol; analyzing largest frag only: "+molnameQ);
-      molQ=hier_scaffolds_utils.largestPart(molQ);
+      molQ=hier_scaffolds_utils.LargestPart(molQ);
     }
     ScaffoldTree scaftreeQ=null;
     try {
@@ -169,7 +170,7 @@ public class hier_scaffolds_common
       {
         System.err.println("Warning: multi-frag mol; analyzing largest frag only: ["+n_mol+"] "+molname);
         ++n_mol_frag;
-        mol=hier_scaffolds_utils.largestPart(mol);
+        mol=hier_scaffolds_utils.LargestPart(mol);
       }
 
       Molecule outmol = new Molecule();	//largest common scaf[s]
@@ -197,8 +198,8 @@ public class hier_scaffolds_common
       }
       n_total_scaf+=scaftree.getScaffoldCount();
 
-      Scaffold mcscaf = hier_scaffolds_utils.maxCommonScaffold(scaftreeQ,scaftree);
-      float sim = hier_scaffolds_utils.commonScaffoldTanimoto(scaftreeQ,scaftree,mcscaf);
+      Scaffold mcscaf = hier_scaffolds_utils.MaxCommonScaffold(scaftreeQ,scaftree);
+      float sim = hier_scaffolds_utils.CommonScaffoldTanimoto(scaftreeQ,scaftree,mcscaf);
 
       if (mcscaf!=null)
       {

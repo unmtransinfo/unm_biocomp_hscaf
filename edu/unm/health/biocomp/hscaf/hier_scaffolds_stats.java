@@ -17,15 +17,15 @@ import edu.unm.health.biocomp.util.*;
 /**	HierS hierarchical scaffolds postprocess application.  Run program with
 	no args for command-line help.  Key task is to generate scaffolds file
 	annotated with occurance info including compound IDs.
-	<br />
+	<br>
 	Molecule files normally should be SMILES format.  The SMILES "name" is a space delimited
 	set of fields: (1) compound ID (integer), (2) set of scaffold IDs.  For example:
 	FC1=CC=C(NC2=NC(=NC3=CC=CC=C23)C2=CN=CC=C2)C=C1 1877191 S:4,5,6,17,18
-	<br />
+	<br>
 	Input scaffold file also normally SMILES, with "name" delimited set of fields:
 	(1) scaffold ID, and (2) scaffold tree string.  For example:
 	N(C1=CC=NC=C1)C1=C2C=CC=CC2=NC(=N1)C1=COC=C1    35 35:(38:(5,6),6,36:(5,37),37)
-	<br />
+	<br>
 	@author Jeremy J Yang
 */
 public class hier_scaffolds_stats
@@ -141,8 +141,9 @@ public class hier_scaffolds_stats
     //  molWriter_chain=new MolExporter(new FileOutputStream(ofile_chain),ofmt);
     //}
 
-    if (verbose>1)
-      System.err.println("JChem version: "+chemaxon.jchem.version.VersionInfo.JCHEM_VERSION);
+    //if (verbose>1)
+      //System.err.println("JChem version: "+chemaxon.jchem.version.VersionInfo.JCHEM_VERSION);
+      //System.err.println("JChem version: "+com.chemaxon.version.VersionInfo.getVersion()); //v6.3+
 
     // Read scaf file (required).
     LinkedHashMap<Long,ScaffoldInfo> scafs = new LinkedHashMap<Long,ScaffoldInfo>();
@@ -521,7 +522,7 @@ public class hier_scaffolds_stats
     //  if (ofile_chain!=null) molWriter_chain.close();
     //}
 
-    System.err.println("Total elapsed time: "+time_utils.timeDeltaStr(t_0,new java.util.Date()));
+    System.err.println("Total elapsed time: "+time_utils.TimeDeltaStr(t_0,new java.util.Date()));
     if (verbose>0)
       System.err.println(DateFormat.getDateTimeInstance().format(new java.util.Date()));
     System.err.println("Total scaffold occurances: "+scaf_freq_total);

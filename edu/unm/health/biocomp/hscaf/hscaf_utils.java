@@ -16,7 +16,7 @@ import com.sleepycat.je.DatabaseException;
  
 /**	Contains internal static functions used in hierarchical scaffold analysis. 
 	Not normally recommended for use by applications.
-	<br />
+	<br>
 	@see edu.unm.health.biocomp.hscaf.Linker
 	@see edu.unm.health.biocomp.hscaf.ScaffoldTree
 	@see edu.unm.health.biocomp.hscaf.Scaffold
@@ -118,7 +118,7 @@ public class hscaf_utils
           // Surprisingly this does not save time!?
           else if (scafstore!=null && scafstore.scaffoldByCanSmi.contains(cscaf.getCansmi()))
           {
-            ScaffoldEntity scent = scafstore.scaffoldByCanSmi.get(cscaf.getCansmi());
+            ScaffoldStoreEntity scent = scafstore.scaffoldByCanSmi.get(cscaf.getCansmi());
             cscaf.setID(scent.getId());
             boolean ok=scaf.addChild(cscaf);
             ++n_cscafs;
@@ -128,7 +128,7 @@ public class hscaf_utils
           }
           else if (scafdb!=null && scafdb.containsScaffoldByCansmi(cscaf.getCansmi()))
           {
-            ScaffoldRecord scafrec=scafdb.getScaffoldByCansmi(cscaf.getCansmi());
+            ScaffoldDBRecord scafrec=scafdb.getScaffoldByCansmi(cscaf.getCansmi());
             cscaf.setID(scafrec.getID());
             boolean ok=scaf.addChild(cscaf);
             ++n_cscafs;
@@ -153,14 +153,14 @@ public class hscaf_utils
   /**   Re-create Scaffold and all offspring as stored for use as sub-tree,
         etc.
   */
-  public static Scaffold entity2Scaffold(ScaffoldStore scafstore,ScaffoldEntity scent)
+  public static Scaffold entity2Scaffold(ScaffoldStore scafstore,ScaffoldStoreEntity scent)
         throws MolFormatException,DatabaseException
   {
     Scaffold scaf = new Scaffold(scent.getCanSmi(),scafstore.isStereo(),scafstore.isKeep_nitro_attachments());
     scaf.setID(scent.getId());
     for (long id: scent.getChildIds())
     {
-      ScaffoldEntity cscent = scafstore.scaffoldById.get(id);
+      ScaffoldStoreEntity cscent = scafstore.scaffoldById.get(id);
       Scaffold cscaf = entity2Scaffold(scafstore,cscent);       //recurse
       boolean ok=scaf.addChild(cscaf);
       cscaf.setParentScaffold(scaf);
@@ -397,7 +397,7 @@ public class hscaf_utils
 	Called after tagJunctions, tags every atom identifying it as
 	scaffold, linker, or sidechain.  Note that sidechains may be
 	joined to scaffolds or linkers.
-	<br />
+	<br>
 	Contains experimental code in development not
 	yet utilized, eventually to improve efficiency and reduce 
 	reliance on smarts patterns.
@@ -459,7 +459,7 @@ public class hscaf_utils
   /**	From specified atom, depth first graph search terminating
 	at junction bonds and tag all atoms.  Also  terminate at
 	atoms already tagged.
-	<br />
+	<br>
 	Contains experimental code in development not
 	yet utilized.
   */
@@ -486,5 +486,58 @@ public class hscaf_utils
     Molecule mol=MolImporter.importMol(smi,"smiles:");
     String cansmi=MolExporter.exportToFormat(mol,(stereo?Scaffold.CANSMIFMT_STEREO:Scaffold.CANSMIFMT));
     return cansmi;
+  }
+  /**	Generate SMARTS for general, portable use in matching scaffold.
+	MolAtom:setQProp() used to set query properties, e.g. "X2" = 2-connections, "rbc2" = 2-ringbonds.
+  */
+  public static String ScaffoldSmarts(Scaffold scaf)
+  {
+    String smarts=null;
+    scaf.decompress();
+    try {
+      Molecule mol = scaf.cloneMolecule();
+      //System.err.println("DEBUG: pre-smarts: "+MolExporter.exportToFormat(mol,"smarts:"));
+      TopologyAnalyser topan = new TopologyAnalyser();
+      topan.setMolecule(mol);
+      for (MolAtom atom: mol.getAtomArray())
+      {
+        if (topan.isRingAtom(mol.indexOf(atom))) //OK in JChem 5.4, deprecated in 5.5
+        //if (Ring.isRingAtom(mol.indexOf(atom)))  //In JChem 5.5 should work, but where is Ring class?
+        {
+          atom.setQProp("R",topan.ringCountOfAtom(mol.indexOf(atom)));
+          atom.setQProp("X",atom.getBondCount()+atom.getImplicitHcount());
+          atom.setQProp("v",atom.getValence()); //[5.8.3] Not supported? No effect on smarts.
+          atom.setImplicitHcount(0);
+        }
+      }
+      mol.qpropCheck(null); //void; does what?
+
+      smarts=MolExporter.exportToFormat(mol,"smarts:s");
+    }
+    catch (MolFormatException e) {System.err.println("MolFormatException: "+e.getMessage()); smarts=""; }
+    catch (MolExportException e) {System.err.println("MolExportException: "+e.getMessage()); smarts=""; }
+    catch (IOException e) {System.err.println("IOException: "+e.getMessage()); smarts=""; }
+          
+    return smarts;
+  }
+  public static String ScaffoldSmiles2Smarts(String smi)
+    throws MolFormatException
+  {
+    return ScaffoldSmarts(new Scaffold(smi,false,false));
+  }
+  public static String ScaffoldSmiles2Smarts(String smi,Boolean stereo,Boolean keep_nitro_attachments)
+    throws MolFormatException
+  {
+    return ScaffoldSmarts(new Scaffold(smi,stereo,keep_nitro_attachments));
+  }
+  public static String ScaffoldMol2Smarts(Molecule mol)
+    throws MolFormatException
+  {
+    return ScaffoldSmarts(new Scaffold(mol,false,false));
+  }
+  public static String ScaffoldMol2Smarts(Molecule mol,Boolean stereo,Boolean keep_nitro_attachments)
+    throws MolFormatException
+  {
+    return ScaffoldSmarts(new Scaffold(mol,stereo,keep_nitro_attachments));
   }
 }

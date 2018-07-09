@@ -1,0 +1,215 @@
+<?xml version="1.0" ?>
+
+<project name="all"
+  basedir="."
+  default="config">
+
+  <property environment="env" />
+  <property name="myname" value="Jeremy J Yang" />
+  <property name="org" value="UNM Translational Informatics Division" />
+  <description>
+	Libraries, applications, and webapps.
+	${myname}, ${org}
+	Note: "ant -Ddebug=true" enables "-Xlint:deprecation".
+  </description>
+
+  <tstamp>
+    <format property="timestamp" pattern="yyyy-MM-dd HH:mm:ss" />
+    <format property="date" pattern="yyyy-MM-dd" />
+    <format property="year" pattern="yyyy" />
+  </tstamp>
+
+  <condition property="isMac">   <equals arg1="${os.name}" arg2="Mac OS X"/> </condition>
+  <condition property="isLinux"> <equals arg1="${os.name}" arg2="Linux"/>    </condition>
+  <condition property="jtgt" value="-target 1.7" else="">
+    <equals arg1="${ant.java.version}" arg2="1.8"/>   
+  </condition>
+  <condition property="jsrc" value="-source 1.7" else="">
+    <equals arg1="${ant.java.version}" arg2="1.8"/>   
+  </condition>
+  <condition property="deprecation" value="-Xlint:deprecation" else="-Xlint:-deprecation">
+    <isset property="debug"/>
+  </condition>
+
+  <target name="configIfLinux" if="isLinux">
+    <!-- echo message="deprecation: ${deprecation}"/ -->
+    <condition property="appdir" value="${user.home}/app" else="/home/app">
+      <equals arg1="${env.HOSTNAME}" arg2="cheminfov.informatics.indiana.edu"/>
+    </condition>
+    <property name="javadir" location="/usr/share/java" />
+    <property name="datadir" location="/home/data" />
+    <presetdef name="jcompile">
+      <javac debug="true" includeantruntime="false" >
+        <compilerarg line="${jsrc}" />
+        <compilerarg line="${jtgt}" />
+        <compilerarg value="${deprecation}" />
+        <compilerarg value="-Xlint:-unchecked" />
+        <compilerarg value="-nowarn" />
+      </javac>
+    </presetdef>
+  </target>
+
+  <target name="configIfMac" if="isMac">
+    <!-- echo message="deprecation: ${deprecation}"/ -->
+    <property name="includeantruntime" value="false" /> <!-- Kludge for Mac -->
+    <property name="appdir" location="/Users/app" />
+    <property name="javadir" location="/usr/share/java" /> <!-- Fix this -->
+    <property name="datadir" location="/Users/data" />
+    <presetdef name="jcompile">
+      <javac debug="true" includeantruntime="false" >
+        <compilerarg line="${jsrc}" />
+        <compilerarg line="${jtgt}" />
+        <compilerarg value="${deprecation}" />
+        <compilerarg value="-Xlint:-unchecked" />
+        <compilerarg value="-nowarn" />
+      </javac>
+    </presetdef>
+  </target>
+
+  <target name="config" depends="configIfMac,configIfLinux"
+   description="Platform-specific configuration." >
+    <property name="d2rq_dir" value="${appdir}/d2rq" />
+    <echo message="OS: ${os.name} ${os.version} [${os.arch}]" />
+    <echo message="java version: ${ant.java.version} (${java.home})"/>
+    <echo message="hostname: ${env.HOSTNAME}" />
+    <echo message="home: ${user.home}" />
+    <echo message="appdir: ${appdir}"/>
+    <echo message="${jsrc} ${jtgt}"/>
+    <echo message="To list targets: ant -p"/>
+    <property name="libdir" location="${basedir}/lib" />
+
+    <!-- dependency jars -->
+    <property name="libj2ee" location="${appdir}/lib/servlet.jar" />
+    <property name="libcos" location="${appdir}/lib/cos.jar" />
+    <property name="libpgsql" location="${appdir}/lib/postgresql.jdbc3.jar" />
+    <property name="libmysql" location="${appdir}/lib/mysql-connector-java.jar" />
+    <property name="libberkeleydb" location="${appdir}/lib/berkeleydb-3.3.75.jar" />
+    <property name="libderby" location="${appdir}/lib/derby-10.10.1.1.jar" />
+    <property name="libcommons_cli" location="${javadir}/commons-cli.jar" />
+    <property name="libcommons_codec" location="${javadir}/commons-codec.jar" />
+    <property name="libcommons_math" location="${appdir}/lib/commons-math3-3.2.jar" />
+    <property name="libguava" location="${appdir}/lib/guava-16.0.1.jar" />
+
+    <property name="jchemdir_preferred" location="${appdir}/chemaxon/jchemsuite" />
+    <property name="jchemdir_default" location="${appdir}/ChemAxon/JChemSuite" />
+    <available file="${jchemdir_preferred}" property="got_chemaxon_preferred"/>
+    <condition property="jchemdir" value="${jchemdir_preferred}" else="${jchemdir_default}">
+      <isset property="got_chemaxon_preferred"/>
+    </condition>
+    <echo message="DEBUG: jchemdir: ${jchemdir}" />
+    <property name="libjchem" location="${jchemdir}/lib/jchem.jar" />
+    <!-- Note: jchem.jar includes other jars via manifest Class-path, must be in same dir. -->
+
+    <!-- homegrown libs -->
+    <property name="lib_unm_http" location="${appdir}/lib/unm_biocomp_http.jar" />
+    <property name="lib_unm_db" location="${appdir}/lib/unm_biocomp_db.jar" />
+    <property name="lib_unm_util" location="${appdir}/lib/unm_biocomp_util.jar" />
+    <property name="lib_unm_util" location="${appdir}/lib/unm_biocomp_depict.jar" />
+
+    <!-- target jars -->
+    <property name="hscaf" location="${libdir}/unm_biocomp_hscaf.jar" />
+  
+    <!-- target wars -->
+    <property name="hscaf_war" location="${libdir}/hscaf.war" />
+  
+  </target>
+
+  <target name="hscaf" description="HScaf JAR; includes webapp" depends="config">
+    <jcompile srcdir="${basedir}/edu/unm/health/biocomp/hscaf" includes="*.java">
+      <classpath>
+        <pathelement path="${basedir}/edu/unm/health/biocomp/hscaf" />
+        <pathelement location="${lib_unm_db}" />
+        <pathelement location="${lib_unm_depict}" />
+        <pathelement location="${lib_unm_http}" />
+        <pathelement location="${lib_unm_util}" />
+        <fileset dir="${jchemdir}/lib/"><include name="jchem*.jar" /></fileset>
+        <fileset dir="${jchemdir}/lib/"><include name="MarvinBeans*.jar" /></fileset>
+        <fileset dir="${jchemdir}/lib/"><include name="com.chemaxon-*.jar" /></fileset>
+        <pathelement location="${libcos}" />
+        <pathelement location="${libderby}" />
+        <pathelement location="${libpgsql}" />
+        <pathelement location="${libberkeleydb}" />
+        <pathelement location="${libj2ee}" />
+      </classpath>
+    </jcompile>
+    <jar destfile="${hscaf}" >
+      <fileset dir="${basedir}"
+	includes="edu/unm/health/biocomp/hscaf/*.class,edu/unm/health/biocomp/hscaf/*.java" />
+      <manifest>
+        <attribute name="Author" value="${myname}" />
+        <attribute name="Builder" value="${user.name}" />
+      </manifest>
+    </jar>
+  </target>
+  <target name="hscaf_clean">
+    <delete><fileset dir="${basedir}/edu/unm/health/biocomp/hscaf" includes="**/*.class"/></delete>
+  </target>
+  
+  <target name="hscaf_war" depends="config,hscaf"
+	description="HScaf WAR (with dependencies)">
+    <war destfile="${hscaf_war}" webxml="edu/unm/health/biocomp/hscaf/web.xml">
+      <zipfileset src="${libdir}/unm_biocomp_hscaf.jar" includes="**/*.*" prefix="WEB-INF/classes" />
+      <zipfileset dir="${basedir}/js" includes="*.js" prefix="js" />
+      <zipfileset dir="${basedir}/css" includes="*.css" prefix="css" />
+      <fileset dir="${basedir}/edu/unm/health/biocomp/hscaf" includes="index.html" />
+      <classes dir="${basedir}/properties" includes="*.properties" />
+      <zipfileset dir="${basedir}/images" prefix="images" />
+      <lib dir="${appdir}/lib" includes="unm_biocomp_http.jar" />
+      <lib dir="${appdir}/lib" includes="unm_biocomp_depict.jar" />
+      <lib dir="${appdir}/lib" includes="unm_biocomp_util.jar" />
+      <lib dir="${jchemdir}/lib" includes="jchem*.jar" />
+      <lib dir="${jchemdir}/lib" includes="MarvinBeans*.jar" />
+      <lib dir="${jchemdir}/lib" includes="com.chemaxon-*.jar" />
+      <lib dir="${jchemdir}/lib" includes="freehep-*.jar" />
+      <lib dir="${jchemdir}/lib" includes="guava-*.jar" />
+      <lib dir="${jchemdir}/lib" includes="automaton-*.jar" />
+      <lib dir="${jchemdir}/lib" includes="commons-*.jar" />
+      <lib dir="${appdir}/lib" includes="cos.jar" />
+      <manifest>
+        <attribute name="Author" value="${myname}" />
+        <attribute name="Organization" value="${org}" />
+        <attribute name="Builder" value="${user.name}" />
+        <attribute name="Date" value="${timestamp}" />
+      </manifest>
+    </war>
+    <echo message="HScaf WAR, includes local dependencies." />
+    <echo message="File: ${hscaf_war}" />
+    <echo message="Author: ${myname}" />
+    <echo message="Organization: ${org}" />
+    <echo message="Builder: ${user.name}" />
+    <echo message="Date: ${timestamp}" />
+  </target>
+
+  <!-- Documentation -->
+
+  <target name="hscaf_doc" depends="config" >
+    <jdoc windowtitle="hscaf API" destdir="${docdir}/hscaf"> 
+      <fileset dir="${srcdir}" includes="edu/unm/health/biocomp/hscaf/*.java" />
+      <classpath>
+        <pathelement path="${classpath}" />
+        <pathelement location="${lib_unm_http}" />
+        <pathelement location="${lib_unm_db}" />
+        <pathelement location="${lib_unm_util}" />
+        <pathelement location="${libberkeleydb}" />
+      </classpath>
+      <doctitle><![CDATA[<H1>HScaf API</H1>]]></doctitle>
+    </jdoc>
+  </target>
+
+  <target name="clean_doc"
+    depends="config" >
+    <delete dir="${docdir}" />
+  </target>
+
+  <!-- Misc/util targets: -->
+
+  <target name="clean" depends="clean_doc"
+    description="Clean all compiled classes, and autogenerated javadocs." >
+    <delete>
+      <fileset dir="${basedir}" includes="**/*.class"/>
+      <fileset dir="${basedir}" includes="**/*.jar"/>
+      <fileset dir="${basedir}" includes="**/*.war"/>
+    </delete>
+  </target>
+
+</project>

@@ -20,7 +20,7 @@ import chemaxon.marvin.io.MolExportException;
 	a related set of Scaffold objects represents the HierS
 	scaffold hierarchy; similarly a scaffold hierarchy can be defined for a database.
 	Scaffolds are by default non-stereo but may be stereo.
-	<br />
+	<br>
 	@see edu.unm.health.biocomp.hscaf.Linker
 	@see edu.unm.health.biocomp.hscaf.Sidechain
 	@see edu.unm.health.biocomp.hscaf.ScaffoldTree
@@ -81,18 +81,28 @@ public class Scaffold extends Molecule implements Comparable<Object>
     this.stereo=stereo;
     int [][] sssr = mol.getSSSR();
     boolean ok=(sssr.length>0);
+
     if (ok)
     {
       mol.clonecopy(this);
       ok=this.dearomatize(); //avoid auto-H-adjustments by JChem
+      //[JChem 5.8.3] fails on: c1c2ccccc2c2[nH]c3ccccc3nc12
+      //System.err.println("DEBUG: dearomatize(): "+ok);
     }
     if (ok)
     {
       hscaf_utils.rmSideChains(this,keep_nitro_attachments);
       this.aromatize(MoleculeGraph.AROM_GENERAL);
     }
-    else
-      (new Molecule()).clonecopy(this); //empty molecule
+//
+// Kludge: To avoid problem due to bug, where mol is not dearomatize-able, allow
+// aromatic cansmi for these cases only.  That is, allow molecule to remain
+// aromatic state.  [JChem 5.8.3] fails on: c1c2ccccc2c2[nH]c3ccccc3nc12
+//
+//    else
+//      (new Molecule()).clonecopy(this); //empty molecule
+//
+    //System.err.println("DEBUG: getCansmi(): "+this.getCansmi());
   }
   /////////////////////////////////////////////////////////////////////////////
   /**   Initialized molecule from smiles and call usual constructor.
@@ -196,8 +206,8 @@ public class Scaffold extends Molecule implements Comparable<Object>
     if (this.cansmi==null)
     {
       try { this.cansmi=MolExporter.exportToFormat(this,(this.stereo?this.CANSMIFMT_STEREO:this.CANSMIFMT)); }
-      catch (MolExportException e) { this.cansmi=""; }
-      catch (IOException e) { this.cansmi=""; }
+      catch (MolExportException e) { System.err.println(e.getMessage()); this.cansmi=""; }
+      catch (IOException e) { System.err.println(e.getMessage()); this.cansmi=""; }
     }
     return this.cansmi;
   }
@@ -212,8 +222,8 @@ public class Scaffold extends Molecule implements Comparable<Object>
     {
       this.decompress();
       try { this.smi=MolExporter.exportToFormat(this,this.smifmt); }
-      catch (MolExportException e) { this.smi=""; }
-      catch (IOException e) { this.smi=""; }
+      catch (MolExportException e) { System.err.println(e.getMessage()); this.smi=""; }
+      catch (IOException e) { System.err.println(e.getMessage()); this.smi=""; }
     }
     return this.smi;
   }
@@ -245,7 +255,7 @@ public class Scaffold extends Molecule implements Comparable<Object>
 	add new child and specify its parentage. If no junction bonds exist,
 	findChildScaffolds() returns null, recursion terminates, and the current
 	scaffold is a leaf.
-	<br />
+	<br>
 	This method does the heavy-lifting.
   */
   public int findChildScaffolds()
@@ -346,7 +356,7 @@ public class Scaffold extends Molecule implements Comparable<Object>
   ///////////////////////////////////////////////////////////////////////////
   /**   Generates string representing the hierarchical scaffold sub tree
 	rooted by this scaffold.
-        e.g. "1:(2,3)" or "1:(2:(3,4,5),6:(4,7))"
+        e.g. "1(2,3)" or "1(2(3,4,5),6(4,7))"
   */
   public String subTreeAsString()
   {
@@ -354,14 +364,10 @@ public class Scaffold extends Molecule implements Comparable<Object>
     String str=""+this.getID();
     if (this.getChildCount()>0)
     {
-      str+=":(";
+      str+="(";
       int i=0;
       for (Scaffold cscaf: this.getChildScaffolds())
-      {
-        if (i>0) str+=",";
-        str+=cscaf.subTreeAsString();
-        ++i;
-      }
+        str+=(((i++>0)?",":"")+cscaf.subTreeAsString());
       str+=")";
     }
     return str;
@@ -373,9 +379,9 @@ public class Scaffold extends Molecule implements Comparable<Object>
   public void compress()
   {
     //System.err.println("DEBUG: Scaffold.compress: [id="+this.id+"]");
-    if (this.cansmi==null) this.cansmi=this.getCansmi();
     this.smi=null;
-    if (!this.isEmpty()) this.clear();
+    if (this.cansmi==null) this.cansmi=this.getCansmi();
+    if (!this.cansmi.isEmpty() && !this.isEmpty()) this.clear();
   }
   ///////////////////////////////////////////////////////////////////////////
   /**	Reconstruct molecule object from stored canonical SMILES.

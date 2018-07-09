@@ -20,11 +20,11 @@ import chemaxon.marvin.io.MolExportException;
 	(and the Bemis-Murko framework).  The ScaffoldTree object
 	does not contain the {@link Scaffold} objects, which may be contained
 	in a {@link ScaffoldSet} or re-constructed from
-	{@link ScaffoldStore} / {@link ScaffoldEntity}s or
-	{@link ScaffoldDB} / {@link ScaffoldRecord}s .
+	{@link ScaffoldStore} / {@link ScaffoldStoreEntity}s or
+	{@link ScaffoldDB} / {@link ScaffoldDBRecord}s .
 	The ScaffoldTree object also contains the {@link Linker}s and {@link Sidechain}s
 	for the input molecule, and a copy of the input molecule.
-	<br />
+	<br>
 	[Implementation notes] Here are the steps in perceiving the scaffolds
 	of an input molecule:
 	<ol>
@@ -44,9 +44,9 @@ import chemaxon.marvin.io.MolExportException;
 	When {@link ScaffoldSet} is used, the ScaffoldTree references {@link Scaffold} instances 
 	which are contained in the {@link ScaffoldSet}.
 	When {@link ScaffoldStore} is used, all {@link Scaffold} instances must be
-	re-constructed from {@link ScaffoldEntity} objects.
+	re-constructed from {@link ScaffoldStoreEntity} objects.
 	When {@link ScaffoldDB} is used, all {@link Scaffold} instances must be
-	re-constructed from {@link ScaffoldRecord} objects.
+	re-constructed from {@link ScaffoldDBRecord} objects.
 	<li> The perception of scaffolds from a molecule is accomplished by:
 	<ul>
 	<li> hscaf_utils.tagJunctions() - tags junction bonds
@@ -62,9 +62,9 @@ import chemaxon.marvin.io.MolExportException;
 	@see edu.unm.health.biocomp.hscaf.Sidechain
 	@see edu.unm.health.biocomp.hscaf.hscaf_utils
 	@see edu.unm.health.biocomp.hscaf.ScaffoldStore
-	@see edu.unm.health.biocomp.hscaf.ScaffoldEntity
+	@see edu.unm.health.biocomp.hscaf.ScaffoldStoreEntity
 	@see edu.unm.health.biocomp.hscaf.ScaffoldDB
-	@see edu.unm.health.biocomp.hscaf.ScaffoldRecord
+	@see edu.unm.health.biocomp.hscaf.ScaffoldDBRecord
 	@author Jeremy J Yang
 */
 public class ScaffoldTree
@@ -108,105 +108,101 @@ public class ScaffoldTree
       this.smifmt+="+0";
       this.cxsmifmt+="+0";
     }
+    //System.err.println("DEBUG (ScaffoldTree): tagJunctions...");
     hscaf_utils.tagJunctions(this.mol,this.keep_nitro_attachments);
     this.rootscaf = new Scaffold(this.mol,this.keep_nitro_attachments,stereo);
     this.linkers = new ArrayList<Linker>(); //default empty
     this.sidechains = new ArrayList<Sidechain>(); //default empty
     if (this.rootscaf==null) return;
-//    try
-//    {
-      if  (scafset!=null)
-      {
-        if  (scafset.containsScaffold(this.rootscaf)) // Scaf present in scafset?
-        {
-          // Replace rootscaf with stored instance.
-          this.rootscaf=scafset.getScaffoldByID(scafset.getScaffoldID(this.rootscaf));
-        }
-        else // New scaf.
-        {
-          if (this.rootscaf.isLegal())
-          {
-            hscaf_utils.findChildScaffolds(this.rootscaf,scafset);
-            rmJBonds(this.mol);
-            this.linkers=findLinkers(this.mol);
-            this.sidechains=findSidechains(this.mol);
-            scafset.mergeScaffoldTree(this.rootscaf); // Scaf IDs assigned here.
-          }
-          else
-          {
-            this.rootscaf=null;
-            return;
-          }
-        }
-      }
-      else if (scafstore!=null)
-      {
-        if (scafstore.scaffoldByCanSmi.contains(this.rootscaf.getCansmi())) // Scaf present in scafstore?
-        {
-	  ScaffoldEntity scent=scafstore.scaffoldByCanSmi.get(this.rootscaf.getCansmi());
-          long id=scent.getId();
-          this.rootscaf.setID(id);
-          scafstore.populateScaffoldTree(this.rootscaf); // Scaf IDs assigned here.
-        }
-        else // New scaf.
-        {
-          if (this.rootscaf.isLegal())
-          {
-            hscaf_utils.findChildScaffolds(this.rootscaf,scafstore);
-            rmJBonds(this.mol);
-            this.linkers=findLinkers(this.mol);
-            this.sidechains=findSidechains(this.mol);
-            scafstore.mergeScaffoldTree(this.rootscaf); // Scaf IDs assigned here.
-          }
-          else
-          {
-            this.rootscaf=null;
-            return;
-          }
-        }
-      }
-      else if (scafdb!=null)
-      {
-        if (scafdb.containsScaffoldByCansmi(this.rootscaf.getCansmi())) // Scaf present in scafdb?
-        {
-	  ScaffoldRecord scafrec=scafdb.getScaffoldByCansmi(this.rootscaf.getCansmi());
-          long id=scafrec.getID();
-          this.rootscaf.setID(id);
-          scafdb.populateScaffoldTree(this.rootscaf); // Scaf IDs assigned here.
-        }
-        else // New scaf.
-        {
-          if (this.rootscaf.isLegal())
-          {
-            hscaf_utils.findChildScaffolds(this.rootscaf,scafdb);
-            rmJBonds(this.mol);
-            this.linkers=findLinkers(this.mol);
-            this.sidechains=findSidechains(this.mol);
-            scafdb.mergeScaffoldTree(this.rootscaf); // Scaf IDs assigned here.
-          }
-          else
-          {
-            this.rootscaf=null;
-            return;
-          }
-        }
-      }
-      else
-      {
-        System.err.println("ERROR (ScaffoldTree): Should not happen; no set, store or db.");
-      }
 
-//    }
-//    catch (SQLException e)
-//    {
-//      System.err.println("SQLException: "+e);  //Maybe smiles > VARCHAR 2048.
-//      System.exit(1);
-//    }
-//    catch (DatabaseException e)
-//    {
-//      System.err.println("DatabaseException: "+e);
-//      System.exit(1);
-//    }
+    if  (scafset!=null)
+    {
+      if  (scafset.containsScaffold(this.rootscaf)) // Scaf present in scafset?
+      {
+        // Replace rootscaf with stored instance.
+        this.rootscaf=scafset.getScaffoldByID(scafset.getScaffoldID(this.rootscaf));
+      }
+      else // New scaf.
+      {
+        if (this.rootscaf.isLegal())
+        {
+          //System.err.println("DEBUG (ScaffoldTree): findChildScaffolds...");
+          hscaf_utils.findChildScaffolds(this.rootscaf,scafset);
+          //System.err.println("DEBUG (ScaffoldTree): rmJBonds...");
+          rmJBonds(this.mol);
+
+          //COMMENTED OUT DUE TO ERRORS ASSOCIATED WITH JChem 6+:
+          //System.err.println("DEBUG (ScaffoldTree): findLinkers...");
+          //this.linkers=findLinkers(this.mol);
+
+          //System.err.println("DEBUG (ScaffoldTree): findSidechains...");
+          this.sidechains=findSidechains(this.mol);
+          //System.err.println("DEBUG (ScaffoldTree): mergeScaffoldTree...");
+          scafset.mergeScaffoldTree(this.rootscaf); // Scaf IDs assigned here.
+        }
+        else
+        {
+          this.rootscaf=null;
+          return;
+        }
+      }
+    }
+    else if (scafstore!=null)
+    {
+      if (scafstore.scaffoldByCanSmi.contains(this.rootscaf.getCansmi())) // Scaf present in scafstore?
+      {
+        ScaffoldStoreEntity scent=scafstore.scaffoldByCanSmi.get(this.rootscaf.getCansmi());
+        long id=scent.getId();
+        this.rootscaf.setID(id);
+        scafstore.populateScaffoldTree(this.rootscaf); // Scaf IDs assigned here.
+      }
+      else // New scaf.
+      {
+        if (this.rootscaf.isLegal())
+        {
+          hscaf_utils.findChildScaffolds(this.rootscaf,scafstore);
+          rmJBonds(this.mol);
+          this.linkers=findLinkers(this.mol);
+          this.sidechains=findSidechains(this.mol);
+          scafstore.mergeScaffoldTree(this.rootscaf); // Scaf IDs assigned here.
+        }
+        else
+        {
+          this.rootscaf=null;
+          return;
+        }
+      }
+    }
+    else if (scafdb!=null)
+    {
+      if (scafdb.containsScaffoldByCansmi(this.rootscaf.getCansmi())) // Scaf present in scafdb?
+      {
+        ScaffoldDBRecord scafrec=scafdb.getScaffoldByCansmi(this.rootscaf.getCansmi());
+        long id=scafrec.getID();
+        this.rootscaf.setID(id);
+        scafdb.populateScaffoldTree(this.rootscaf); // Scaf IDs assigned here.
+      }
+      else // New scaf.
+      {
+        if (this.rootscaf.isLegal())
+        {
+          hscaf_utils.findChildScaffolds(this.rootscaf,scafdb);
+          rmJBonds(this.mol);
+          this.linkers=findLinkers(this.mol);
+          this.sidechains=findSidechains(this.mol);
+          scafdb.mergeScaffoldTree(this.rootscaf); // Scaf IDs assigned here.
+        }
+        else
+        {
+          this.rootscaf=null;
+          return;
+        }
+      }
+    }
+    else
+    {
+      System.err.println("ERROR (ScaffoldTree): Should not happen; no set, store or db.");
+    }
   }
   /**   {@link ScaffoldSet} used for storage.
 	@param mol input molecule
@@ -420,6 +416,16 @@ public class ScaffoldTree
 	the rest are side-chains.  Returned sidechains 
 	are deduplicated.  Note that linkers must have
 	side-chains removed.
+
+	THIS CODE FAILS WITH JChem versions 6+ ?
+	E.g.
+
+	Query: *-*
+	Target: O(*1**1)*1**1 |$;J_p;;;J_p;;$|
+	Caused by:
+	java.lang.NullPointerException
+	Mar 18, 2016 11:28:26 AM chemaxon.sss.search.SearchUtil logException
+	INFO: An error occurred during search: null
   */
   private static ArrayList<Linker> findLinkers(Molecule mol)
     throws SearchException,MolFormatException,MolExportException,IOException

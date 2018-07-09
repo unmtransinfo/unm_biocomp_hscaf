@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<web-app xmlns="http://java.sun.com/xml/ns/j2ee"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd"
+  version="2.4">
+  <display-name>HScaf webapp</display-name>
+  <description>HScaf web application</description>
+
+  <servlet>
+    <servlet-name>hscaf</servlet-name>
+    <servlet-class>edu.unm.health.biocomp.hscaf.hscaf_servlet</servlet-class>
+    <init-param> <param-name>APPNAME</param-name>
+      <param-value>HScaf</param-value> </init-param>
+    <init-param> <param-name>UPLOADDIR</param-name>
+      <param-value>/tmp</param-value> </init-param>
+    <init-param> <param-name>LOGDIR</param-name>
+      <param-value>${catalina.home}/logs</param-value></init-param>
+    <init-param> <param-name>SCRATCHDIR</param-name>
+      <param-value>${catalina.home}/webapps/biocomp/scratch</param-value></init-param>
+    <init-param> <param-name>N_MAX</param-name>
+      <param-value>200</param-value> </init-param>
+    <init-param><param-name>MAX_POST_SIZE</param-name>
+      <param-value>10485760</param-value></init-param>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>hscaf</servlet-name>
+    <url-pattern>/hscaf</url-pattern>
+  </servlet-mapping>
+
+  <servlet>
+    <servlet-name>mol2img</servlet-name>
+    <servlet-class>edu.unm.health.biocomp.depict.mol2img_servlet</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>mol2img</servlet-name>
+    <url-pattern>/mol2img</url-pattern>
+  </servlet-mapping>
+
+</web-app>

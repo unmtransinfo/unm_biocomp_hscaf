@@ -12,19 +12,19 @@ import chemaxon.formats.MolFormatException;
 /**	Provides persistent scaffold storage via standard RDB.
 	For large jobs this avoids memory limits and improves performance by
 	storing solved scaffolds for rapid lookup and avoiding re-calculation.
-	<br />
+	<br>
 	An additional benefit of DB usage is paralellization, since
 	separate processes can concurrently read and write to the same
 	scaffold database by locking and unlocking records.
-	<br />
+	<br>
 	Minimal, standard RDB features required; no chemical cartridge used,
 	smiles canonicalization by client.
-	<br />
+	<br>
 	PostgreSQL supported only.  Maybe should use another layer to be database
 	agnostic (support MySql, etc).
-	<br />
+	<br>
 	@author Jeremy J Yang
-	@see	ScaffoldRecord
+	@see	ScaffoldDBRecord
  */
 public class ScaffoldDB
 {
@@ -65,12 +65,12 @@ public class ScaffoldDB
   /**	Constructor creates or opens existing database at location specified.<br/>
 	<p>
 	<code>CREATE SCHEMA IF NOT EXISTS <i>DBSCHEMA</i><br/>
-	Schema:<br />
+	Schema:<br>
 	<code>CREATE TABLE <i>DBSCHEMA.DBTABLEPREFIX</i>scaffold (<br/>
 	&nbsp;	id INTEGER PRIMARY KEY,<br/>
 	&nbsp;	scafsmi VARCHAR(512) NOT NULL,<br/>
 	&nbsp;	scaftree VARCHAR(2048))<br/>
-	<br />
+	<br>
 	CREATE TABLE <i>DBSCHEMA.DBTABLEPREFIX</i>scaf2scaf (<br/>
 	&nbsp;	parent_id INTEGER,<br/>
 	&nbsp;	child_id INTEGER )<br/>
@@ -110,8 +110,8 @@ public class ScaffoldDB
     this.stereo=stereo;
     this.keep_nitro_attachments=keep_nitro_attachments;
 
-    this.dbcon=pg_utils.dbConnect(this.dbhost,this.dbport,this.dbname,this.dbusr,this.dbpw);
-    //System.err.println("DEBUG: "+pg_utils.serverStatusTxt(this.dbcon));
+    this.dbcon=pg_utils.DBConnect(this.dbhost,this.dbport,this.dbname,this.dbusr,this.dbpw);
+    //System.err.println("DEBUG: "+pg_utils.ServerStatusTxt(this.dbcon));
 
     boolean ok;
     if (create_new)
@@ -135,21 +135,21 @@ public class ScaffoldDB
     this.dbcon.setAutoCommit(true);  //Should be true by default but let's be sure.
 
     //sql="CREATE SCHEMA IF NOT EXISTS "+this.dbschema; //should work in PG 9.3
-    try {ok&=pg_utils.execute(this.dbcon,"CREATE SCHEMA "+this.dbschema);} catch (Exception e) {} //Ignore; assume schema exists
+    try {ok&=pg_utils.Execute(this.dbcon,"CREATE SCHEMA "+this.dbschema);} catch (Exception e) {} //Ignore; assume schema exists
 
     sql="CREATE TABLE "+this.dbschema+"."+this.dbtableprefix+"scaffold"
       +"(id INTEGER PRIMARY KEY,scafsmi VARCHAR(512) NOT NULL,scaftree VARCHAR(2048))";
-    ok&=pg_utils.execute(this.dbcon,sql);
+    ok&=pg_utils.Execute(this.dbcon,sql);
 
     sql="CREATE TABLE "+this.dbschema+"."+this.dbtableprefix+"scaf2scaf"
       +"(parent_id INTEGER NOT NULL,child_id INTEGER NOT NULL)";
-    ok&=pg_utils.execute(this.dbcon,sql);
+    ok&=pg_utils.Execute(this.dbcon,sql);
 
     sql="CREATE INDEX "+this.dbtableprefix+"_scaffold_id_idx ON "+this.dbschema+"."+this.dbtableprefix+"scaffold (id)";
-    ok&=pg_utils.execute(this.dbcon,sql);
+    ok&=pg_utils.Execute(this.dbcon,sql);
 
     sql="CREATE INDEX "+this.dbtableprefix+"_scaf2scaf_parent_id_idx ON "+this.dbschema+"."+this.dbtableprefix+"scaf2scaf (parent_id)";
-    ok&=pg_utils.execute(this.dbcon,sql);
+    ok&=pg_utils.Execute(this.dbcon,sql);
 
     return ok;
   }
@@ -162,10 +162,10 @@ public class ScaffoldDB
     boolean ok=true;
     if (this.dbcon==null) return false;
     String sql="REINDEX TABLE "+this.dbschema+"."+this.dbtableprefix+"scaffold";
-    ok&=pg_utils.execute(this.dbcon,sql);
+    ok&=pg_utils.Execute(this.dbcon,sql);
 
     sql="REINDEX TABLE "+this.dbschema+"."+this.dbtableprefix+"scaf2scaf";
-    ok&=pg_utils.execute(this.dbcon,sql);
+    ok&=pg_utils.Execute(this.dbcon,sql);
     return ok;
   }
   /////////////////////////////////////////////////////////////////////////////
@@ -177,12 +177,12 @@ public class ScaffoldDB
     boolean ok=true;
     if (this.dbcon==null) return false;
     String sql="SELECT COUNT(scafsmi) FROM "+this.dbschema+"."+this.dbtableprefix+"scaffold";
-    ResultSet rset=pg_utils.executeSql(this.dbcon,sql); // Check ok?  How?
+    ResultSet rset=pg_utils.ExecuteSql(this.dbcon,sql); // Check ok?  How?
     ok&=(rset.next());
     rset.getStatement().close();
 
     sql="SELECT COUNT(parent_id) FROM "+this.dbschema+"."+this.dbtableprefix+"scaf2scaf";
-    rset=pg_utils.executeSql(this.dbcon,sql); // Check ok?  How?
+    rset=pg_utils.ExecuteSql(this.dbcon,sql); // Check ok?  How?
     ok&=(rset.next());
     rset.getStatement().close();
     return ok;
@@ -195,7 +195,7 @@ public class ScaffoldDB
   {
     long n=0;
     String sql="SELECT COUNT(scafsmi) FROM "+this.dbschema+"."+this.dbtableprefix+"scaffold";
-    ResultSet rset=pg_utils.executeSql(this.dbcon,sql); // Check ok?  How?
+    ResultSet rset=pg_utils.ExecuteSql(this.dbcon,sql); // Check ok?  How?
     if (rset.next())
       n=rset.getInt(1);
     rset.getStatement().close();
@@ -216,21 +216,21 @@ public class ScaffoldDB
   }
   /////////////////////////////////////////////////////////////////////////////
   /**	@param	id	scaffold ID
-	@return	{@link ScaffoldRecord} for specified scaffold ID 
+	@return	{@link ScaffoldDBRecord} for specified scaffold ID 
   */
-  public ScaffoldRecord getScaffoldByID(long id)
+  public ScaffoldDBRecord getScaffoldByID(long id)
 	throws SQLException
   {
-    ScaffoldRecord scafrec = null;
+    ScaffoldDBRecord scafrec = null;
     String sql="SELECT scafsmi FROM "+this.dbschema+"."+this.dbtableprefix+"scaffold WHERE id="+id;
-    ResultSet rset=pg_utils.executeSql(this.dbcon,sql); // Check ok?  How?
+    ResultSet rset=pg_utils.ExecuteSql(this.dbcon,sql); // Check ok?  How?
     if (!rset.next()) return null; //ERROR
 
-    scafrec = new ScaffoldRecord(id,rset.getString("scafsmi")); 
+    scafrec = new ScaffoldDBRecord(id,rset.getString("scafsmi")); 
     rset.getStatement().close();
 
     sql="SELECT child_id FROM "+this.dbschema+"."+this.dbtableprefix+"scaf2scaf WHERE parent_id="+id;
-    rset=pg_utils.executeSql(this.dbcon,sql); // Check ok?  How?
+    rset=pg_utils.ExecuteSql(this.dbcon,sql); // Check ok?  How?
     while (rset.next())
     {
       scafrec.addChildID(rset.getLong("child_id"));
@@ -239,9 +239,9 @@ public class ScaffoldDB
   }
   /////////////////////////////////////////////////////////////////////////////
   /**	@param	smi	scaffold SMILES
-	@return	{@link ScaffoldRecord} for specified smiles
+	@return	{@link ScaffoldDBRecord} for specified smiles
   */
-  public ScaffoldRecord getScaffoldBySmiles(String smi)
+  public ScaffoldDBRecord getScaffoldBySmiles(String smi)
 	throws SQLException,MolFormatException,IOException
   {
     String cansmi=hscaf_utils.cansmi(smi,this.isStereo());
@@ -249,14 +249,14 @@ public class ScaffoldDB
   }
   /////////////////////////////////////////////////////////////////////////////
   /**	@param	cansmi	scaffold SMILES, already canonical
-	@return	{@link ScaffoldRecord} for specified smiles
+	@return	{@link ScaffoldDBRecord} for specified smiles
   */
-  public ScaffoldRecord getScaffoldByCansmi(String cansmi)
+  public ScaffoldDBRecord getScaffoldByCansmi(String cansmi)
 	throws SQLException,MolFormatException,IOException
   {
     String sql="SELECT id FROM "+this.dbschema+"."+this.dbtableprefix+
 	"scaffold WHERE scafsmi='"+pg_utils.QuoteString(cansmi)+"'";
-    ResultSet rset=pg_utils.executeSql(this.dbcon,sql); // Check ok?  How?
+    ResultSet rset=pg_utils.ExecuteSql(this.dbcon,sql); // Check ok?  How?
     if (!rset.next()) return null; //NOT FOUND
     return getScaffoldByID(rset.getLong("id"));
   }
@@ -267,7 +267,7 @@ public class ScaffoldDB
 	throws SQLException
   {
     String sql="SELECT scafsmi FROM "+this.dbschema+"."+this.dbtableprefix+"scaffold"+" WHERE id="+id;
-    ResultSet rset=pg_utils.executeSql(this.dbcon,sql);
+    ResultSet rset=pg_utils.ExecuteSql(this.dbcon,sql);
     boolean ok=rset.next();
     rset.getStatement().close();
     return ok;
@@ -291,7 +291,7 @@ public class ScaffoldDB
   {
     String sql="SELECT id FROM "+this.dbschema+"."+this.dbtableprefix+
 	"scaffold WHERE scafsmi='"+pg_utils.QuoteString(cansmi)+"'";
-    ResultSet rset=pg_utils.executeSql(this.dbcon,sql);
+    ResultSet rset=pg_utils.ExecuteSql(this.dbcon,sql);
     boolean ok=rset.next();
     rset.getStatement().close();
     return ok;
@@ -306,7 +306,7 @@ public class ScaffoldDB
     long id=0;
     String sql="SELECT id FROM "+this.dbschema+"."+this.dbtableprefix+
 	"scaffold WHERE scafsmi='"+pg_utils.QuoteString(cansmi)+"'";
-    ResultSet rset=pg_utils.executeSql(this.dbcon,sql);
+    ResultSet rset=pg_utils.ExecuteSql(this.dbcon,sql);
     boolean ok=rset.next();
     if (!ok) return 0; //NOT FOUND
     id=rset.getLong("id");
@@ -314,25 +314,25 @@ public class ScaffoldDB
     return id;
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Write {@link ScaffoldRecord} to database.
+  /**	Write {@link ScaffoldDBRecord} to database.
 	Should assure scaffold not already known.
   */
-  public boolean addScaffold(ScaffoldRecord scafrec)
+  public boolean addScaffold(ScaffoldDBRecord scafrec)
 	throws SQLException
   {
     boolean ok=true;
     this.dbcon.setAutoCommit(true);  //Should be true by default but let's be sure.
     String sql="INSERT INTO "+this.dbschema+"."+this.dbtableprefix+"scaffold (id,scafsmi,scaftree)"
 	+" VALUES ("+scafrec.getID()+",'"+scafrec.getCansmi()+"','"+getScaffoldString(scafrec)+"')";
-    pg_utils.execute(this.dbcon,sql);
+    pg_utils.Execute(this.dbcon,sql);
     return ok;
   }
   /////////////////////////////////////////////////////////////////////////////
-  /**	Update database with revised {@link ScaffoldRecord},
+  /**	Update database with revised {@link ScaffoldDBRecord},
 	matched by ID.
-  	@param scafrec	 revised {@link ScaffoldRecord} with pre-existing ID
+  	@param scafrec	 revised {@link ScaffoldDBRecord} with pre-existing ID
   */
-  public boolean updateScaffoldByID(ScaffoldRecord scafrec)
+  public boolean updateScaffoldByID(ScaffoldDBRecord scafrec)
 	throws SQLException
   {
     boolean ok=true;
@@ -340,11 +340,11 @@ public class ScaffoldDB
     String sql="UPDATE "+this.dbschema+"."+this.dbtableprefix+"scaffold"
 	+" SET scafsmi='"+scafrec.getCansmi()+"',scaftree='"+getScaffoldString(scafrec)+"'"
 	+" WHERE id="+scafrec.getID();
-    pg_utils.execute(this.dbcon,sql); // Check ok?  How?
+    pg_utils.Execute(this.dbcon,sql); // Check ok?  How?
 
     sql="DELETE FROM "+this.dbschema+"."+this.dbtableprefix+"scaf2scaf"
 	+" WHERE parent_id="+scafrec.getID() ;
-    pg_utils.execute(this.dbcon,sql);
+    pg_utils.Execute(this.dbcon,sql);
 
     HashSet<Long> chids = scafrec.getChildIDs();
     for (Iterator<Long> itr=chids.iterator(); itr.hasNext(); )
@@ -352,7 +352,7 @@ public class ScaffoldDB
       long chid=itr.next();
       sql="INSERT INTO "+this.dbschema+"."+this.dbtableprefix+"scaf2scaf"
 	+" (parent_id,child_id)  VALUES ("+scafrec.getID()+","+chid+")" ;
-      pg_utils.execute(this.dbcon,sql); // Check ok?  How?
+      pg_utils.Execute(this.dbcon,sql); // Check ok?  How?
     }
 
     return ok;
@@ -373,10 +373,10 @@ public class ScaffoldDB
   {
     this.dbcon.setAutoCommit(true);  //Should be true by default but let's be sure.
     String sql="DELETE FROM "+this.dbschema+"."+this.dbtableprefix+"scaffold";
-    pg_utils.execute(this.dbcon,sql); // Check ok?  How?
+    pg_utils.Execute(this.dbcon,sql); // Check ok?  How?
 
     sql="DELETE FROM "+this.dbschema+"."+this.dbtableprefix+"scaf2scaf";
-    pg_utils.execute(this.dbcon,sql); // Check ok?  How?
+    pg_utils.Execute(this.dbcon,sql); // Check ok?  How?
   }
   /////////////////////////////////////////////////////////////////////////////
   /**	Destroy databases.  Tables are dropped (not schema).
@@ -386,9 +386,9 @@ public class ScaffoldDB
   {
     this.dbcon.setAutoCommit(true);  //Should be true by default but let's be sure.
     String sql="DROP TABLE "+this.dbschema+"."+this.dbtableprefix+"scaffold CASCADE";
-    pg_utils.execute(this.dbcon,sql); // Check ok?  How?
+    pg_utils.Execute(this.dbcon,sql); // Check ok?  How?
     sql="DROP TABLE "+this.dbschema+"."+this.dbtableprefix+"scaf2scaf CASCADE";
-    pg_utils.execute(this.dbcon,sql); // Check ok?  How?
+    pg_utils.Execute(this.dbcon,sql); // Check ok?  How?
   }
   /////////////////////////////////////////////////////////////////////////////
   /**	Merges a fully populated ScaffoldTree defined by the Scaffold
@@ -397,7 +397,7 @@ public class ScaffoldDB
 	New scaffolds are assigned new IDs.  Existing scaffolds are
 	recognized as such.  Initially called with new root scaffold,
 	then recursively.  For each call, process all immediate child
-	scaffolds, then assign ChildIDs and ParentID to ScaffoldRecord.
+	scaffolds, then assign ChildIDs and ParentID to ScaffoldDBRecord.
 
 	Note that a new unknown parent may have known and/or new child scaffolds.	
 	Hence this recursive method must handle the known-scaffold case.
@@ -409,7 +409,7 @@ public class ScaffoldDB
     String cansmi=scaf.getCansmi();
     //System.err.println("DEBUG: (mergeScaffoldTree) scafsmi="+cansmi);
     long id=0L;
-    // First either find existing or create new ScaffoldRecord.
+    // First either find existing or create new ScaffoldDBRecord.
     if (this.containsScaffoldByCansmi(cansmi))
     {
       id=this.scaffoldCansmi2ID(cansmi);
@@ -418,13 +418,13 @@ public class ScaffoldDB
     else
     {
       id=this.count()+1;	//new ID (consecutive)
-      this.addScaffold(new ScaffoldRecord(id,cansmi));
+      this.addScaffold(new ScaffoldDBRecord(id,cansmi));
       ++n_new;
     }
     scaf.setID(id);
-    ScaffoldRecord scafrec=this.getScaffoldByID(id);
+    ScaffoldDBRecord scafrec=this.getScaffoldByID(id);
 
-    // For each child, find existing or create new ScaffoldRecord, then recurse.
+    // For each child, find existing or create new ScaffoldDBRecord, then recurse.
     for (Scaffold cscaf : scaf.getChildScaffolds())
     {
       cansmi=cscaf.getCansmi();
@@ -436,10 +436,10 @@ public class ScaffoldDB
       else
       {
         cid=this.count()+1;	//new ID (consecutive)
-        this.addScaffold(new ScaffoldRecord(cid,cansmi));
+        this.addScaffold(new ScaffoldDBRecord(cid,cansmi));
         ++n_new;
       }
-      ScaffoldRecord cscafrec=getScaffoldByID(cid); //existing or just added
+      ScaffoldDBRecord cscafrec=getScaffoldByID(cid); //existing or just added
       cscaf.setID(cid);
       scafrec.addChildID(cid);
       this.updateScaffoldByID(scafrec); //update
@@ -470,14 +470,14 @@ public class ScaffoldDB
       //System.err.println("DEBUG: (populateScaffoldTree) aaack! ID not found...");
       return 0; //Should not happen.
     }
-    ScaffoldRecord scafrec = this.getScaffoldByID(scaf.getID());
+    ScaffoldDBRecord scafrec = this.getScaffoldByID(scaf.getID());
     HashSet<Long> chids = scafrec.getChildIDs();
     //System.err.println("DEBUG: (populateScaffoldTree) chids.size() = "+chids.size());
     for (Iterator<Long> itr=chids.iterator(); itr.hasNext(); )
     {
       long chid=itr.next();
       //if (chid==0) System.err.println("DEBUG: (populateScaffoldTree) ERROR; chid = "+chid);
-      ScaffoldRecord cscafrec = this.getScaffoldByID(chid);
+      ScaffoldDBRecord cscafrec = this.getScaffoldByID(chid);
       String cansmi = cscafrec.getCansmi();
       //System.err.println("DEBUG: (populateScaffoldTree) chid = "+chid+" ; smi = "+cansmi);
       Scaffold cscaf = null;
@@ -496,7 +496,7 @@ public class ScaffoldDB
         rooted by this scaffold. Same format as Scaffold.subTreeAsString().
 	e.g. "1:(2,3)" or "1:(2:(3,4,5),6:(4,7))"
   */
-  public String getScaffoldString(ScaffoldRecord scafrec)
+  public String getScaffoldString(ScaffoldDBRecord scafrec)
 	throws SQLException
   {
     if (scafrec==null) return "";
@@ -511,7 +511,7 @@ public class ScaffoldDB
       {
         long id=itr.next();
         if (i>0) str+=",";
-        ScaffoldRecord cscafrec=this.getScaffoldByID(id);
+        ScaffoldDBRecord cscafrec=this.getScaffoldByID(id);
         //if (cscafrec==null) System.err.println("DEBUG: id="+id+", cscafrec==null.");
         str+=this.getScaffoldString(cscafrec); //recurse
         ++i;
@@ -552,7 +552,7 @@ public class ScaffoldDB
     PrintWriter fout_writer=new PrintWriter(new BufferedWriter(new FileWriter(fout,false))); //overwrite
 
     String sql="SELECT id,scafsmi,scaftree FROM "+this.dbschema+"."+this.dbtableprefix+"scaffold";
-    ResultSet rset=pg_utils.executeSql(this.dbcon,sql);
+    ResultSet rset=pg_utils.ExecuteSql(this.dbcon,sql);
     while (rset.next())
     {
       fout_writer.write(rset.getString("scafsmi")+" "+rset.getLong("id")+" "+rset.getString("scaftree")+"\n");
@@ -595,7 +595,7 @@ public class ScaffoldDB
     if (scafdb!=null)
     {
       try {
-        ScaffoldRecord scafrec = new ScaffoldRecord(1L,"N1CCC1");
+        ScaffoldDBRecord scafrec = new ScaffoldDBRecord(1L,"N1CCC1");
         scafdb.addScaffold(scafrec);
         System.err.println("DEBUG: info(): "+scafdb.info());
       }
