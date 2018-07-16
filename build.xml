@@ -1,8 +1,6 @@
 <?xml version="1.0" ?>
 
-<project name="all"
-  basedir="."
-  default="config">
+<project name="all" basedir="." default="hscaf">
 
   <property environment="env" />
   <property name="myname" value="Jeremy J Yang" />

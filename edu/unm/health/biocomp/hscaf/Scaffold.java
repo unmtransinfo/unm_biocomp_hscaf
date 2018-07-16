@@ -320,6 +320,9 @@ public class Scaffold extends Molecule implements Comparable<Object>
     return childids;
   }
   ///////////////////////////////////////////////////////////////////////////
+  /*	May result in java.lang.StackOverflowError */
+  /*	CC(C)Oc1:c:c:c(:c:c:1F)\N=c\2/:[nH]:c(=O):n(CC(C)(C)C(=O)O):c(=O):n:2Cc3:c:c:c(C):c(F):c:3	*/
+  /*	Explicit aromatic bonds (colons) confuse JChem.  Works without colons.	*/
   public int getAllChildCount()
   {
     if (this.childscafs==null) return 0;
