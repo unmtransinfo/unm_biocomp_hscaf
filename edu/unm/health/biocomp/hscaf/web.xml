@@ -16,11 +16,13 @@
     <init-param> <param-name>LOGDIR</param-name>
       <param-value>${catalina.home}/logs</param-value></init-param>
     <init-param> <param-name>SCRATCHDIR</param-name>
-      <param-value>${catalina.home}/webapps/biocomp/scratch</param-value></init-param>
+      <param-value>${catalina.home}/webapps/hscaf/scratch</param-value></init-param>
     <init-param> <param-name>N_MAX</param-name>
       <param-value>200</param-value> </init-param>
     <init-param><param-name>MAX_POST_SIZE</param-name>
       <param-value>10485760</param-value></init-param>
+    <init-param> <param-name>DEMOSMIFILE</param-name>
+      <param-value>${catalina.home}/webapps/hscaf/data/hscaf_testset.smi</param-value></init-param>
   </servlet>
   <servlet-mapping>
     <servlet-name>hscaf</servlet-name>

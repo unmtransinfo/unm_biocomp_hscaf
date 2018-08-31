@@ -152,6 +152,7 @@
       <fileset dir="${basedir}/edu/unm/health/biocomp/hscaf" includes="index.html" />
       <classes dir="${basedir}/properties" includes="*.properties" />
       <zipfileset dir="${basedir}/images" prefix="images" />
+      <zipfileset dir="${basedir}/data" prefix="data" />
       <lib dir="${appdir}/lib" includes="unm_biocomp_http.jar" />
       <lib dir="${appdir}/lib" includes="unm_biocomp_depict.jar" />
       <lib dir="${appdir}/lib" includes="unm_biocomp_util.jar" />
@@ -163,6 +164,11 @@
       <lib dir="${jchemdir}/lib" includes="automaton-*.jar" />
       <lib dir="${jchemdir}/lib" includes="commons-*.jar" />
       <lib dir="${appdir}/lib" includes="cos.jar" />
+
+      <lib dir="${jchemdir}/lib" includes="dom4j-1.6.1.jar" /> <!-- ??? -->
+      <lib dir="${appdir}/lib" includes="axis.jar" /> <!-- ??? -->
+      <lib dir="${appdir}/lib" includes="jcommon-1.0.21.jar" /> <!-- ??? -->
+
       <manifest>
         <attribute name="Author" value="${myname}" />
         <attribute name="Organization" value="${org}" />

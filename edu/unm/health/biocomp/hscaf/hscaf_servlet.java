@@ -2,25 +2,21 @@ package edu.unm.health.biocomp.hscaf;
 
 import java.io.*;
 import java.lang.Math;
-import java.net.URLEncoder;
-import java.net.InetAddress;
+import java.net.*; //URLEncoder,InetAddress
 import java.text.*;
 import java.util.*;
 import java.util.regex.*;
 import javax.servlet.*;
 import javax.servlet.http.*;
 
-import com.oreilly.servlet.MultipartRequest;
+import com.oreilly.servlet.*; //MultipartRequest,Base64Encoder,Base64Decoder
 import com.oreilly.servlet.multipart.DefaultFileRenamePolicy;
-import com.oreilly.servlet.Base64Encoder;
-import com.oreilly.servlet.Base64Decoder;
 
 import chemaxon.formats.*;
 import chemaxon.util.MolHandler;
 import chemaxon.struc.*;
 import chemaxon.sss.search.SearchException;
-import chemaxon.license.LicenseException;
-import chemaxon.license.LicenseManager;
+import chemaxon.license.*; //LicenseException,LicenseManager
 import chemaxon.marvin.io.MolExportException;
 
 import edu.unm.health.biocomp.http.*;
@@ -42,6 +38,7 @@ public class hscaf_servlet extends HttpServlet
   private static String APPNAME=null;	// configured in web.xml
   private static String UPLOADDIR=null;	// configured in web.xml
   private static String SCRATCHDIR=null;      // configured in web.xml
+  private static String DEMOSMIFILE=null;      // configured in web.xml
   private static String PREFIX=null;
   private static int scratch_retire_sec=3600;
   private static int N_MAX=100; // configured in web.xml
@@ -145,7 +142,7 @@ public class hscaf_servlet extends HttpServlet
         response.setContentType("text/html");
         out=response.getWriter();
         out.println(HtmUtils.HeaderHtm(APPNAME,jsincludes,cssincludes,JavaScript(),color1,request));
-        out.println(helpHtm());
+        out.println(HelpHtm());
         out.println(HtmUtils.FooterHtm(errors,true));
       }
       else if (downloadtxt!=null && downloadtxt.length()>0) // POST param
@@ -166,7 +163,7 @@ public class hscaf_servlet extends HttpServlet
         out=response.getWriter();
         out.println(HtmUtils.HeaderHtm(APPNAME,jsincludes,cssincludes,JavaScript(),color1,request));
         out.println(formHtm(mrequest,response));
-        out.println("<SCRIPT>go_reset(window.document.mainform)</SCRIPT>");
+        out.println("<SCRIPT>go_init(window.document.mainform)</SCRIPT>");
         out.println(HtmUtils.FooterHtm(errors,true));
       }
     }
@@ -429,7 +426,8 @@ public class hscaf_servlet extends HttpServlet
     +("<INPUT TYPE=HIDDEN NAME=\"hscaf\">\n")
     +("<TABLE WIDTH=\"100%\"><TR><TD><H1>"+APPNAME+"</H1></TD>\n")
     +("<TD ALIGN=RIGHT>\n")
-    +("<BUTTON TYPE=BUTTON onClick=\"void window.open('"+response.encodeURL(SERVLETNAME)+"?help=TRUE','helpwin','width=600,height=400,scrollbars=1,resizable=1')\"><B>help</B></BUTTON>\n")
+    +("<BUTTON TYPE=BUTTON onClick=\"void window.open('"+response.encodeURL(SERVLETNAME)+"?help=TRUE','helpwin','width=600,height=400,scrollbars=1,resizable=1')\"><B>Help</B></BUTTON>\n")
+    +("<BUTTON TYPE=BUTTON onClick=\"go_demo(this.form)\"><B>Demo</B></BUTTON>\n")
     +("<BUTTON TYPE=BUTTON onClick=\"window.location.replace('"+response.encodeURL(SERVLETNAME)+"')\"><B>Reset</B></BUTTON>\n")
     +("</TD></TR></TABLE>\n")
     +("<HR>\n")
@@ -633,7 +631,9 @@ public class hscaf_servlet extends HttpServlet
       throws IOException,FileNotFoundException
   {
     // This is our convention; Apache proxies the 8080 port via /tomcat.
-    String mol2img_servleturl=("http://"+SERVERNAME+"/tomcat"+CONTEXTPATH+"/mol2img");
+    //String mol2img_servleturl=("http://"+SERVERNAME+"/tomcat"+CONTEXTPATH+"/mol2img");
+    //HACK: why mol2img not working in hscaf?
+    String mol2img_servleturl=("http://"+SERVERNAME+"/tomcat/biocomp/mol2img");
     int n_mol=0;
     int w=sizes_w.get(params.getVal("size"));
     int h=sizes_h.get(params.getVal("size"));
@@ -849,9 +849,19 @@ public class hscaf_servlet extends HttpServlet
   }
   /////////////////////////////////////////////////////////////////////////////
   private static String JavaScript()
+      throws IOException
   {
-    return(
-"function go_reset(form)"+
+    String js="var demotxt='';";
+    if (DEMOSMIFILE!=null) {
+      BufferedReader buff=new BufferedReader(new FileReader(DEMOSMIFILE));
+      String line=null;
+      String startdate=null;
+      while ((line=buff.readLine())!=null)
+        js+=("demotxt+='"+line+"\\n';\n");
+      buff.close();
+    }
+    js+=(
+"function go_init(form)"+
 "{\n"+
 "  form.file2txt.checked=true;\n"+
 "  form.intxt.value='';\n"+
@@ -882,18 +892,25 @@ public class hscaf_servlet extends HttpServlet
 "  }\n"+
 "  return 1;\n"+
 "}\n"+
+"function go_demo(form) {\n"+
+"  go_init(form);\n"+
+"  form.intxt.value=demotxt;\n"+
+"  form.hscaf.value='TRUE'\n"+
+"  form.submit()\n"+
+"}\n"+
 "function go_hscaf(form)\n"+
 "{\n"+
 "  if (!checkform(form)) return;\n"+
 "  form.hscaf.value='TRUE'\n"+
 "  form.submit()\n"+
 "}\n");
+    return(js);
   }
   /////////////////////////////////////////////////////////////////////////////
-  private static String helpHtm()
+  private static String HelpHtm()
   {
     return (
-    "<B>"+APPNAME+" help</B><P>\n"+
+    "<B>"+APPNAME+" Help</B><P>\n"+
     "<P>\n"+
     "Built with package edu.unm.health.biocomp.hscaf.\n"+
     "API documentation <A HREF=\"http://"+SERVERNAME+"/tomcat/doc/hscaf/\">here</A>\n"+
@@ -923,6 +940,7 @@ public class hscaf_servlet extends HttpServlet
       throw new ServletException("Please supply UPLOADDIR parameter");
     SCRATCHDIR=conf.getInitParameter("SCRATCHDIR");
     if (SCRATCHDIR==null) SCRATCHDIR="/tmp";
+    DEMOSMIFILE=conf.getInitParameter("DEMOSMIFILE");
     LOGDIR=conf.getInitParameter("LOGDIR")+CONTEXTPATH;
     if (LOGDIR==null) LOGDIR="/usr/local/tomcat/logs"+CONTEXTPATH;
     try { N_MAX=Integer.parseInt(conf.getInitParameter("N_MAX")); }
