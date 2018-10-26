@@ -631,9 +631,12 @@ public class hscaf_servlet extends HttpServlet
       throws IOException,FileNotFoundException
   {
     // This is our convention; Apache proxies the 8080 port via /tomcat.
-    //String mol2img_servleturl=("http://"+SERVERNAME+"/tomcat"+CONTEXTPATH+"/mol2img");
+
+    String mol2img_servleturl=("http://"+SERVERNAME+"/tomcat"+CONTEXTPATH+"/mol2img");
+
     //HACK: why mol2img not working in hscaf?
-    String mol2img_servleturl=("http://"+SERVERNAME+"/tomcat/biocomp/mol2img");
+    //String mol2img_servleturl=("http://"+SERVERNAME+"/tomcat/biocomp/mol2img");
+
     int n_mol=0;
     int w=sizes_w.get(params.getVal("size"));
     int h=sizes_h.get(params.getVal("size"));
