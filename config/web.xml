@@ -6,6 +6,8 @@
   <display-name>HScaf webapp</display-name>
   <description>HScaf web application</description>
 
+<!-- NOW HANDLED BY ANNOTATIONS -->
+<!-- 
   <servlet>
     <servlet-name>hscaf</servlet-name>
     <servlet-class>edu.unm.health.biocomp.hscaf.hscaf_servlet</servlet-class>
@@ -28,6 +30,7 @@
     <servlet-name>hscaf</servlet-name>
     <url-pattern>/hscaf</url-pattern>
   </servlet-mapping>
+-->
 
   <servlet>
     <servlet-name>mol2img</servlet-name>

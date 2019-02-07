@@ -8,6 +8,7 @@ import java.util.*;
 import java.util.regex.*;
 import javax.servlet.*;
 import javax.servlet.http.*;
+import javax.servlet.annotation.*;
 
 import com.oreilly.servlet.*; //MultipartRequest,Base64Encoder,Base64Decoder
 import com.oreilly.servlet.multipart.DefaultFileRenamePolicy;
@@ -24,20 +25,26 @@ import edu.unm.health.biocomp.util.*;
 
 /**	HierS web app.  Hierarchical scaffold analysis (ref: Wilkens, et al.).
 	<br>
-	See GitHub repo:
-	<a href="https://github.com/jeremyjyang/unm-biocomp-hscaf.">UNM-Biocomp-HScaf</a>
-	for more info.
-	<br>
 	@author Jeremy J Yang
 */
+@WebServlet(urlPatterns = "/hscaf", name = "hscaf",
+  initParams = {
+    @WebInitParam(name = "APPNAME", value = "HScaf"),
+    @WebInitParam(name = "UPLOADDIR", value = "/tmp"),
+    @WebInitParam(name = "SCRATCHDIR", value = "/scratch"), //relative web-path
+    @WebInitParam(name = "N_MAX", value = "200"),
+    @WebInitParam(name = "MAX_POST_SIZE", value = "10485760"),
+    @WebInitParam(name = "DEMOSMIFILE", value = "/data/hscaf_testset.smi") //relative web-path
+	}
+)
 public class hscaf_servlet extends HttpServlet
 {
   private static String SERVLETNAME=null;
   private static String CONTEXTPATH=null;
-  private static String LOGDIR=null;	// configured in web.xml
   private static String APPNAME=null;	// configured in web.xml
   private static String UPLOADDIR=null;	// configured in web.xml
   private static String SCRATCHDIR=null;      // configured in web.xml
+  private static String SCRATCHDIR_PATH=null;
   private static String DEMOSMIFILE=null;      // configured in web.xml
   private static String PREFIX=null;
   private static int scratch_retire_sec=3600;
@@ -56,7 +63,6 @@ public class hscaf_servlet extends HttpServlet
   private static String SERVERNAME=null;
   private static String REMOTEHOST=null;
   private static String datestr=null;
-  private static File logfile=null;
   private static String color1="#EEEEEE";
   private static String smifmt="cxsmiles:u-L-l-e-d-D-p-R-f-w";
   private static String smifmt_dep="cxsmiles:u-L-e-d-D-p-R-f-w"; // "l" for labels/aliases ("J")
@@ -129,7 +135,7 @@ public class hscaf_servlet extends HttpServlet
         }
         out.println(HtmUtils.OutputHtm(outputs));
         out.println(HtmUtils.FooterHtm(errors,true));
-        HtmUtils.PurgeScratchDirs(Arrays.asList(SCRATCHDIR),scratch_retire_sec,false,".",(HttpServlet) this);
+        HtmUtils.PurgeScratchDirs(Arrays.asList(SCRATCHDIR_PATH),scratch_retire_sec,false,".",(HttpServlet) this);
       }
     }
     else
@@ -195,69 +201,9 @@ public class hscaf_servlet extends HttpServlet
     logo_htm+=(HtmUtils.HtmTipper(imghtm,tiphtm,href,200,"white"));
     logo_htm+="</TD></TR></TABLE>";
     errors.add(logo_htm);
+    errors.add("DEBUG: SERVLETNAME="+SERVLETNAME);
 
-    //Create webapp-specific log dir if necessary:
-    File dout=new File(LOGDIR);
-    if (!dout.exists())
-    {
-      boolean ok=dout.mkdir();
-      System.err.println("LOGDIR creation "+(ok?"succeeded":"failed")+": "+LOGDIR);
-      if (!ok)
-      {
-        errors.add("ERROR: could not create LOGDIR: "+LOGDIR);
-        return false;
-      }
-    }
-
-    String logpath=LOGDIR+"/"+SERVLETNAME+".log";
-    logfile=new File(logpath);
-    if (!logfile.exists())
-    {
-      try { logfile.createNewFile(); }
-      catch (IOException e) {
-        errors.add("ERROR: Cannot create log file:"+e.getMessage());
-        return false;
-      }
-      logfile.setWritable(true,true);
-      PrintWriter out_log=new PrintWriter(logfile);
-      out_log.println("date\tip\tN"); 
-      out_log.flush();
-      out_log.close();
-    }
-    if (!logfile.canWrite())
-    {
-      errors.add("ERROR: Log file not writable.");
-      return false;
-    }
-    BufferedReader buff=new BufferedReader(new FileReader(logfile));
-    if (buff==null)
-    {
-      errors.add("ERROR: Cannot open log file.");
-      return false;
-    }
-
-    int n_lines=0;
-    String line=null;
-    String startdate=null;
-    while ((line=buff.readLine())!=null)
-    {
-      ++n_lines;
-      String[] fields=Pattern.compile("\\t").split(line);
-      if (n_lines==2) startdate=fields[0];
-    }
-    buff.close(); //Else can result in error: "Too many open files"
     Calendar calendar=Calendar.getInstance();
-    if (n_lines>2)
-    {
-      calendar.set(Integer.parseInt(startdate.substring(0,4)),
-               Integer.parseInt(startdate.substring(4,6))-1,
-               Integer.parseInt(startdate.substring(6,8)),
-               Integer.parseInt(startdate.substring(8,10)),
-               Integer.parseInt(startdate.substring(10,12)),0);
-
-      DateFormat df=DateFormat.getDateInstance(DateFormat.FULL,Locale.US);
-      errors.add("since "+df.format(calendar.getTime())+", times used: "+(n_lines-1));
-    }
     calendar.setTime(new Date());
     datestr=String.format("%04d%02d%02d%02d%02d",
       calendar.get(Calendar.YEAR),
@@ -382,7 +328,8 @@ public class hscaf_servlet extends HttpServlet
     molReader.close();
     if (n_failed>0) errors.add("Errors (unable to read mol): "+n_failed);
 
-    File scratchdir = new File(SCRATCHDIR);
+    SCRATCHDIR_PATH = CONTEXT.getRealPath(SCRATCHDIR);
+    File scratchdir = new File(SCRATCHDIR_PATH);
     if (!(scratchdir.exists() && scratchdir.isDirectory()))
     {
       try {
@@ -709,9 +656,6 @@ public class hscaf_servlet extends HttpServlet
         "<BUTTON TYPE=BUTTON onClick=\"this.form.submit()\">"+
         "download "+fname+" ("+file_utils.NiceBytes(fout.length())+")</BUTTON></FORM>\n");
     }
-    PrintWriter out_log=new PrintWriter(new BufferedWriter(new FileWriter(logfile,true)));
-    out_log.printf("%s\t%s\t%d\n",datestr,REMOTEHOST,n_mol); 
-    out_log.close();
   }
   /////////////////////////////////////////////////////////////////////////////
   /**	Generate output for runmode "1xN".
@@ -773,9 +717,6 @@ public class hscaf_servlet extends HttpServlet
       outputs.add("<CENTER>"+thtm+"</CENTER>");
     if (params.isChecked("out_batch"))
       outputs.add("NOTE: 1xN batch output not yet supported.");
-    PrintWriter out_log=new PrintWriter(new BufferedWriter(new FileWriter(logfile,true)));
-    out_log.printf("%s\t%s\t%d\n",datestr,REMOTEHOST,n_mol); 
-    out_log.close();
   }
   /////////////////////////////////////////////////////////////////////////////
   /**	Generate output for runmode "NxN".
@@ -846,9 +787,6 @@ public class hscaf_servlet extends HttpServlet
       outputs.add("<CENTER>"+thtm+"</CENTER>");
     if (params.isChecked("out_batch"))
       outputs.add("NOTE: NxN batch output not yet supported.");
-    PrintWriter out_log=new PrintWriter(new BufferedWriter(new FileWriter(logfile,true)));
-    out_log.printf("%s\t%s\t%d\n",datestr,REMOTEHOST,n_mol); 
-    out_log.close();
   }
   /////////////////////////////////////////////////////////////////////////////
   private static String JavaScript()
@@ -856,7 +794,8 @@ public class hscaf_servlet extends HttpServlet
   {
     String js="var demotxt='';";
     if (DEMOSMIFILE!=null) {
-      BufferedReader buff=new BufferedReader(new FileReader(DEMOSMIFILE));
+      String absoluteDiskPath = CONTEXT.getRealPath(DEMOSMIFILE);
+      BufferedReader buff=new BufferedReader(new FileReader(absoluteDiskPath ));
       String line=null;
       String startdate=null;
       while ((line=buff.readLine())!=null)
@@ -944,8 +883,6 @@ public class hscaf_servlet extends HttpServlet
     SCRATCHDIR=conf.getInitParameter("SCRATCHDIR");
     if (SCRATCHDIR==null) SCRATCHDIR="/tmp";
     DEMOSMIFILE=conf.getInitParameter("DEMOSMIFILE");
-    LOGDIR=conf.getInitParameter("LOGDIR")+CONTEXTPATH;
-    if (LOGDIR==null) LOGDIR="/usr/local/tomcat/logs"+CONTEXTPATH;
     try { N_MAX=Integer.parseInt(conf.getInitParameter("N_MAX")); }
     catch (Exception e) { N_MAX=100; }
   }
