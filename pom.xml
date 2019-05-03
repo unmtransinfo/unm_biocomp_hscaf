@@ -104,7 +104,6 @@
               <directory>${project.basedir}/src/main/resources</directory>
               <excludes>
                 <exclude>*.properties</exclude>
-                <exclude>data/**/*.*</exclude>
               </excludes>
             </resource>
             <resource>
@@ -113,13 +112,6 @@
                 <include>*.properties</include>
               </includes>
               <targetPath>WEB-INF/classes</targetPath>
-            </resource>
-            <resource>
-              <directory>${project.basedir}/src/main/resources/data</directory>
-              <includes>
-                <include>**/*.*</include>
-              </includes>
-              <targetPath>WEB-INF/data</targetPath>
             </resource>
           </webResources>
         </configuration>
