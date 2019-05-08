@@ -6,7 +6,7 @@
   <groupId>unmbiocomputing</groupId>
   <artifactId>unm_biocomp_hscaf</artifactId>
   <packaging>war</packaging>
-  <name>unm_biocomp_hscaf</name>
+  <name>UNM_BIOCOMP_HSCAF</name>
   <version>0.0.1-SNAPSHOT</version>
   <description>HierS scaffold analysis implementation.</description>
   <url>https://github.com/unmtransinfo/unm_biocomp_hscaf</url>
@@ -140,18 +140,15 @@
             <phase>package</phase>
             <configuration>
               <packaging>jar</packaging>
-              <file>${project.build.directory}\${artifactId}-${version}.jar</file>
+              <file>${project.build.directory}/${project.artifactId}-${project.version}.jar</file>
             </configuration>
-            <goals>
-              <goal>install-file</goal>
-            </goals>
           </execution>
         </executions>
       </plugin>
 
     </plugins>
 
-    <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
+    <pluginManagement>
       <plugins>
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>
@@ -165,7 +162,6 @@
           <artifactId>maven-project-info-reports-plugin</artifactId>
           <version>3.0.0</version>
         </plugin>
-        <!-- see http://maven.apache.org/ref/current/maven-core/default-bindings.html#Plugin_bindings_for_jar_packaging -->
         <plugin>
           <artifactId>maven-resources-plugin</artifactId>
           <version>3.0.2</version>
