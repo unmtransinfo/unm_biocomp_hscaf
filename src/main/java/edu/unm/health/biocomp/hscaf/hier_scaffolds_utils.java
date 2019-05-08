@@ -283,4 +283,19 @@ public class hier_scaffolds_utils
     if (rowcount==2) return true;
     else return false;
   }
+
+  ///////////////////////////////////////////////////////////////////////////
+  /**     Returns largest fragment of fragmented molecule&#46;
+  */
+  public static Molecule largestPart(Molecule mol)
+  {
+    int acount_largest=0;
+    int i_largest=0;
+    Molecule[] partmols=mol.convertToFrags();
+    for (int i=0;i<partmols.length;++i)
+    {
+      if (partmols[i].getAtomCount()>acount_largest) i_largest=i;
+    }
+    return partmols[i_largest];
+  }
 }
