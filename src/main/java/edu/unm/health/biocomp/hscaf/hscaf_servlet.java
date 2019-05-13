@@ -20,8 +20,8 @@ import chemaxon.sss.search.SearchException;
 import chemaxon.license.*; //LicenseException,LicenseManager
 import chemaxon.marvin.io.MolExportException;
 
-import edu.unm.health.biocomp.http.*;
 import edu.unm.health.biocomp.util.*;
+import edu.unm.health.biocomp.util.http.*;
 
 /**	HierS web app.  Hierarchical scaffold analysis (ref: Wilkens, et al.).
 	<br>
