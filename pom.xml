@@ -5,9 +5,9 @@
 
   <groupId>unmbiocomputing</groupId>
   <artifactId>unm_biocomp_hscaf</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
   <packaging>jar</packaging>
   <name>UNM_BIOCOMP_HSCAF</name>
-  <version>0.0.1-SNAPSHOT</version>
   <description>HierS scaffold analysis implementation.</description>
   <url>https://github.com/unmtransinfo/unm_biocomp_hscaf</url>
 
@@ -96,6 +96,7 @@
           <target>${jdk.version}</target>
         </configuration>
       </plugin>
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
@@ -123,23 +124,6 @@
             </goals>
           </execution>
         </executions>
-        <configuration>
-          <webResources>
-            <resource>
-              <directory>${project.basedir}/src/main/resources</directory>
-              <excludes>
-                <exclude>*.properties</exclude>
-              </excludes>
-            </resource>
-            <resource>
-              <directory>${project.basedir}/src/main/resources</directory>
-              <includes>
-                <include>*.properties</include>
-              </includes>
-              <targetPath>WEB-INF/classes</targetPath>
-            </resource>
-          </webResources>
-        </configuration>
       </plugin>
     </plugins>
   </build>
