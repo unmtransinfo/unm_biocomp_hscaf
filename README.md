@@ -27,4 +27,4 @@ mvn exec:java -Dexec.mainClass="edu.unm.health.biocomp.hscaf.hier_scaffolds"
 Developed at the [UNM Translational Informatics Division](http://datascience.unm.edu).
 
 * [Public web app](http://pasilla.health.unm.edu/tomcat/hscaf)
-
+* HierS: hierarchical scaffold clustering using topological chemical graphs. Wilkens SJ(1), Janes J, Su AI. J Med Chem. 2005 May 5;48(9):3182-93.
