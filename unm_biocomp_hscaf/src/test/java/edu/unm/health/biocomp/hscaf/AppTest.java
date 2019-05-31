@@ -1,4 +1,4 @@
-package unmbiocomputing;
+package edu.unm.health.biocomp.hscaf;
 
 import junit.framework.Test;
 import junit.framework.TestCase;

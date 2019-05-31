@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>unmbiocomputing</groupId>
+    <artifactId>hscaf</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>hscaf_war</artifactId>
+  <packaging>war</packaging>
+  <name>HSCAF_WAR</name>
+  <description>Maven sub-module to generate WAR-file.</description>
+
+  <dependencies>
+    <dependency> <!-- Others via transitive -->
+      <groupId>unmbiocomputing</groupId>
+      <artifactId>unm_biocomp_hscaf</artifactId>
+      <version>0.0.1-SNAPSHOT</version>
+    </dependency>
+  </dependencies>
+  
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-war-plugin</artifactId>
+        <version>3.2.2</version>
+        <configuration>
+          <outputDirectory>${project.parent.basedir}/target</outputDirectory>
+          <webResources>
+            <resource>
+              <directory>${project.parent.basedir}/src/main/resources</directory>
+              <excludes>
+                <exclude>*.properties</exclude>
+                <exclude>data/**/*.*</exclude>
+              </excludes>
+            </resource>
+            <resource>
+              <directory>${project.parent.basedir}/src/main/resources</directory>
+              <includes>
+                <include>*.properties</include>
+              </includes>
+              <targetPath>WEB-INF/classes</targetPath>
+            </resource>
+            <!-- resource>
+              <directory>${project.parent.basedir}/src/main/resources/data</directory>
+              <includes>
+                <include>**/*.*</include>
+              </includes>
+              <targetPath>WEB-INF/data</targetPath>
+            </resource -->
+          </webResources>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-maven-plugin</artifactId>
+        <version>9.4.18-SNAPSHOT</version>
+      </plugin>
+    </plugins>
+
+  </build>
+
+</project>
