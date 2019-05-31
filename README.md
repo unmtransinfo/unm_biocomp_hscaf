@@ -1,4 +1,4 @@
-# `UNM_BIOCOMP_HSCAF`
+# `UNM_BIOCOMP_HSCAF` <img align="right" src="/doc/images/hscaf_logo.png">
 
 Implements the HierS hierarchical scaffold algorithm by Wilkens et al.
 Designed for HierS scaffold analysis, for single molecules, datasets, or
