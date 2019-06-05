@@ -6,7 +6,7 @@
   <groupId>unmbiocomputing</groupId>
   <artifactId>unm_biocomp_hscaf</artifactId>
   <version>0.0.1-SNAPSHOT</version>
-  <packaging>war</packaging>
+  <packaging>jar</packaging>
   <name>UNM_BIOCOMP_HSCAF</name>
   <description>HierS scaffold analysis implementation.</description>
   <url>https://github.com/unmtransinfo/unm_biocomp_hscaf</url>
@@ -75,6 +75,7 @@
       <groupId>org.apache.tomcat</groupId>
       <artifactId>tomcat-servlet-api</artifactId>
       <version>9.0.19</version>
+      <scope>provided</scope>
     </dependency>
 
     <dependency>
@@ -101,15 +102,6 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
         <version>3.1.1</version>
-        <executions>
-          <execution>
-            <id>make-a-jar</id>
-            <phase>compile</phase>
-            <goals>
-              <goal>jar</goal>
-            </goals>
-          </execution>
-        </executions>
         <configuration>
           <archive>
             <manifest>
@@ -119,40 +111,6 @@
           </archive>
         </configuration>
       </plugin>
-
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-war-plugin</artifactId>
-        <version>3.2.2</version>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>inplace</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-install-plugin</artifactId>
-        <version>3.0.0-M1</version>
-        <executions>
-          <execution>
-            <id>add-2-local-repo</id>
-            <phase>package</phase>
-            <configuration>
-                <packaging>jar</packaging>
-                <file>${project.build.directory}/${artifactId}-${version}.jar</file>
-            </configuration>
-            <goals>
-              <goal>install-file</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
     </plugins>
   </build>
 
