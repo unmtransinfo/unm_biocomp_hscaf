@@ -2,7 +2,7 @@ package edu.unm.health.biocomp.hscaf;
 
 import java.util.*;
 
-import edu.unm.health.biocomp.db.*;
+import edu.unm.health.biocomp.util.db.*;
 
 /**	Represents scaffold record used for storage in ScaffoldDB.
 	Normally comprised of data from tables "scaffold" and "scaf2scaf".

@@ -5,7 +5,7 @@ import java.util.*;
 import java.math.*;
 import java.sql.*;
 
-import edu.unm.health.biocomp.db.*;
+import edu.unm.health.biocomp.util.db.*;
 
 import chemaxon.formats.MolFormatException;
 

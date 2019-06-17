@@ -27,11 +27,6 @@
       <artifactId>unm_biocomp_depict</artifactId>
       <version>0.0.1-SNAPSHOT</version>
     </dependency>
-    <dependency>
-      <groupId>unmbiocomputing</groupId>
-      <artifactId>unm_biocomp_db</artifactId>
-      <version>0.0.1-SNAPSHOT</version>
-    </dependency>
 
     <dependency>
       <groupId>com.chemaxon</groupId>

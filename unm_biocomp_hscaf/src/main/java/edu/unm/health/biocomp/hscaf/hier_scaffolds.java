@@ -13,7 +13,7 @@ import chemaxon.sss.search.*;
 import chemaxon.struc.*;
 import chemaxon.marvin.io.MolExportException;
 
-import edu.unm.health.biocomp.db.*;
+import edu.unm.health.biocomp.util.db.*;
 import edu.unm.health.biocomp.util.*;
 
 /// to do: [ ] parallelize (threads, db locks, etc.) 

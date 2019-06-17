@@ -15,7 +15,7 @@ import chemaxon.marvin.io.MolExportException;
 import com.sleepycat.je.DatabaseException;
  
 import edu.unm.health.biocomp.hscaf.*;
-import edu.unm.health.biocomp.db.*;
+import edu.unm.health.biocomp.util.db.*;
 
 /////////////////////////////////////////////////////////////////////////////
 /**	Contains static functions used in hierarchical scaffold analysis.
