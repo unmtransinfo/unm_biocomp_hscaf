@@ -18,6 +18,18 @@ common-scaffold comparisons between pairs or groups of molecules.
 mvn clean install
 ```
 
+## Deploying `HSCAF`
+
+```
+mvn --projects hscaf_war tomcat7:deploy
+```
+
+or
+
+```
+mvn --projects hscaf_war tomcat7:redeploy
+```
+
 ## Usage
 
 ```

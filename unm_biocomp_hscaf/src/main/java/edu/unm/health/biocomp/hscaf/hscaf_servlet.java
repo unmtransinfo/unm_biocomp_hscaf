@@ -201,7 +201,7 @@ public class hscaf_servlet extends HttpServlet
     logo_htm+=(HtmUtils.HtmTipper(imghtm,tiphtm,href,200,"white"));
     logo_htm+="</TD></TR></TABLE>";
     errors.add(logo_htm);
-    errors.add("DEBUG: SERVLETNAME="+SERVLETNAME);
+    //errors.add("DEBUG: SERVLETNAME="+SERVLETNAME);
 
     Calendar calendar=Calendar.getInstance();
     calendar.setTime(new Date());
