@@ -23,18 +23,19 @@ import chemaxon.marvin.io.MolExportException;
 import edu.unm.health.biocomp.util.*;
 import edu.unm.health.biocomp.util.http.*;
 
-/**	HierS web app.  Hierarchical scaffold analysis (ref: Wilkens, et al.).
+/**	HScaf web app.  Hierarchical scaffold analysis (Wilkens, 2005).
 	<br>
 	@author Jeremy J Yang
 */
 @WebServlet(urlPatterns = "/hscaf", name = "hscaf",
   initParams = {
+    @WebInitParam(name = "PROXY_PREFIX", value = "/tomcat"), //Could be in web.xml?
     @WebInitParam(name = "APPNAME", value = "HScaf"),
     @WebInitParam(name = "UPLOADDIR", value = "/tmp"),
-    @WebInitParam(name = "SCRATCHDIR", value = "/scratch"), //relative web-path
+    @WebInitParam(name = "SCRATCHDIR", value = "/scratch"),
     @WebInitParam(name = "N_MAX", value = "200"),
     @WebInitParam(name = "MAX_POST_SIZE", value = "10485760"),
-    @WebInitParam(name = "DEMOSMIFILE", value = "/data/hscaf_testset.smi") //relative web-path
+    @WebInitParam(name = "DEMOSMIFILE", value = "/data/hscaf_testset.smi")
 	}
 )
 public class hscaf_servlet extends HttpServlet
@@ -68,6 +69,8 @@ public class hscaf_servlet extends HttpServlet
   private static String smifmt_dep="cxsmiles:u-L-e-d-D-p-R-f-w"; // "l" for labels/aliases ("J")
   private static File fout=null;
   private static File fout_scaf=null;
+  private static String PROXY_PREFIX=null; // configured in web.xml
+  private static String MOL2IMG_SERVLETURL=null;
 
   /////////////////////////////////////////////////////////////////////////////
   public void doPost(HttpServletRequest request,HttpServletResponse response)
@@ -98,14 +101,15 @@ public class hscaf_servlet extends HttpServlet
     }
 
     // main logic:
-    ArrayList<String> cssincludes = new ArrayList<String>(Arrays.asList("biocomp.css"));
-    ArrayList<String> jsincludes = new ArrayList<String>(Arrays.asList("/marvin/marvin.js","biocomp.js","ddtip.js"));
+    ArrayList<String> cssincludes = new
+ArrayList<String>(Arrays.asList(PROXY_PREFIX+CONTEXTPATH+"/css/biocomp.css"));
+    ArrayList<String> jsincludes = new ArrayList<String>(Arrays.asList(PROXY_PREFIX+CONTEXTPATH+"/js/biocomp.js",PROXY_PREFIX+CONTEXTPATH+"/js/ddtip.js"));
     boolean ok=initialize(request,mrequest);
     if (!ok)
     {
       response.setContentType("text/html");
       out=response.getWriter();
-      out.println(HtmUtils.HeaderHtm(APPNAME, jsincludes, cssincludes, JavaScript(), "", color1, request, "tomcat"));
+      out.println(HtmUtils.HeaderHtm(APPNAME, jsincludes, cssincludes, JavaScript(), "", color1, request));
       out.println(HtmUtils.FooterHtm(errors,true));
       return;
     }
@@ -115,7 +119,7 @@ public class hscaf_servlet extends HttpServlet
       {
         response.setContentType("text/html");
         out=response.getWriter();
-        out.println(HtmUtils.HeaderHtm(APPNAME, jsincludes, cssincludes, JavaScript(), "", color1, request, "tomcat"));
+        out.println(HtmUtils.HeaderHtm(APPNAME, jsincludes, cssincludes, JavaScript(), "", color1, request));
         out.println(formHtm(mrequest,response));
         ArrayList<ScaffoldTree> scaftrees = HScafsGenerate(mols);
 
@@ -147,7 +151,7 @@ public class hscaf_servlet extends HttpServlet
       {
         response.setContentType("text/html");
         out=response.getWriter();
-        out.println(HtmUtils.HeaderHtm(APPNAME, jsincludes, cssincludes, JavaScript(), "", color1, request, "tomcat"));
+        out.println(HtmUtils.HeaderHtm(APPNAME, jsincludes, cssincludes, JavaScript(), "", color1, request));
         out.println(HelpHtm());
         out.println(HtmUtils.FooterHtm(errors,true));
       }
@@ -167,7 +171,7 @@ public class hscaf_servlet extends HttpServlet
       {
         response.setContentType("text/html");
         out=response.getWriter();
-        out.println(HtmUtils.HeaderHtm(APPNAME, jsincludes, cssincludes, JavaScript(), "", color1, request, "tomcat"));
+        out.println(HtmUtils.HeaderHtm(APPNAME, jsincludes, cssincludes, JavaScript(), "", color1, request));
         out.println(formHtm(mrequest,response));
         out.println("<SCRIPT>go_init(window.document.mainform)</SCRIPT>");
         out.println(HtmUtils.FooterHtm(errors,true));
@@ -188,14 +192,15 @@ public class hscaf_servlet extends HttpServlet
     sizes_h.put("s",160); sizes_w.put("s",160);
     sizes_h.put("m",200); sizes_w.put("m",220);
     sizes_h.put("l",240); sizes_w.put("l",280);
+    MOL2IMG_SERVLETURL=(PROXY_PREFIX+CONTEXTPATH+"/mol2img");
 
     String logo_htm="<TABLE CELLSPACING=5 CELLPADDING=5><TR><TD>";
-    String imghtm=("<IMG BORDER=0 SRC=\"/tomcat"+CONTEXTPATH+"/images/biocomp_logo_only.gif\">");
+    String imghtm=("<IMG BORDER=0 SRC=\""+PROXY_PREFIX+CONTEXTPATH+"/images/biocomp_logo_only.gif\">");
     String tiphtm=(APPNAME+" web app from UNM Translational Informatics.");
     String href=("http://medicine.unm.edu/informatics/");
     logo_htm+=(HtmUtils.HtmTipper(imghtm,tiphtm,href,200,"white"));
     logo_htm+="</TD><TD>";
-    imghtm=("<IMG BORDER=0 SRC=\"/tomcat"+CONTEXTPATH+"/images/chemaxon_powered_100px.png\">");
+    imghtm=("<IMG BORDER=0 SRC=\""+PROXY_PREFIX+CONTEXTPATH+"/images/chemaxon_powered_100px.png\">");
     tiphtm=("JChem from ChemAxon Ltd.");
     href=("http://www.chemaxon.com");
     logo_htm+=(HtmUtils.HtmTipper(imghtm,tiphtm,href,200,"white"));
@@ -577,13 +582,6 @@ public class hscaf_servlet extends HttpServlet
   private static void HScafsResults(HttpServletResponse response,ArrayList<ScaffoldTree> scaftrees)
       throws IOException,FileNotFoundException
   {
-    // This is our convention; Apache proxies the 8080 port via /tomcat.
-
-    String mol2img_servleturl=("http://"+SERVERNAME+"/tomcat"+CONTEXTPATH+"/mol2img");
-
-    //HACK: why mol2img not working in hscaf?
-    //String mol2img_servleturl=("http://"+SERVERNAME+"/tomcat/biocomp/mol2img");
-
     int n_mol=0;
     int w=sizes_w.get(params.getVal("size"));
     int h=sizes_h.get(params.getVal("size"));
@@ -605,26 +603,26 @@ public class hscaf_servlet extends HttpServlet
       thtm+="<TR>\n";
       thtm+=("<TD VALIGN=TOP ALIGN=RIGHT>"+n_mol+".</TD>\n");
       String smiles=scaftree.inmol.exportToFormat(smifmt_dep);
-      String imghtm=HtmUtils.Smi2ImgHtm(smiles,depopts,h-30,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
+      String imghtm=HtmUtils.Smi2ImgHtm(smiles,depopts,h-30,w,MOL2IMG_SERVLETURL,true,4,"go_zoom_smi2img");
       thtm+=("<TD ALIGN=CENTER VALIGN=TOP>"+imghtm+"<BR>\n");
       thtm+=(molname.length()<35?molname:(molname.substring(0,31)+"...")+"</TD>\n");
       if (scaftree.getScaffoldCount()>0) {
         smiles=scaftree.getSmiForScaffoldsGroupmol(params.isChecked("show_js"));
-        imghtm=HtmUtils.Smi2ImgHtm(smiles,depopts,h,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
+        imghtm=HtmUtils.Smi2ImgHtm(smiles,depopts,h,w,MOL2IMG_SERVLETURL,true,4,"go_zoom_smi2img");
         thtm+=("<TD ALIGN=CENTER>"+imghtm+"</TD>\n");
       }
       else
         thtm+=("<TD ALIGN=CENTER>~</TD>\n");
       if (scaftree.getLinkerCount()>0) {
         smiles=scaftree.getSmiForLinkersGroupmol(params.isChecked("show_js"));
-        imghtm=HtmUtils.Smi2ImgHtm(smiles,depopts,h,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
+        imghtm=HtmUtils.Smi2ImgHtm(smiles,depopts,h,w,MOL2IMG_SERVLETURL,true,4,"go_zoom_smi2img");
         thtm+=("<TD ALIGN=CENTER>"+imghtm+"</TD>\n");
       }
       else
         thtm+=("<TD ALIGN=CENTER>~</TD>\n");
       if (scaftree.getSidechainCount()>0) {
         smiles=scaftree.getSmiForSidechainsGroupmol(params.isChecked("show_js"));
-        imghtm=HtmUtils.Smi2ImgHtm(smiles,depopts,h,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
+        imghtm=HtmUtils.Smi2ImgHtm(smiles,depopts,h,w,MOL2IMG_SERVLETURL,true,4,"go_zoom_smi2img");
         thtm+=("<TD ALIGN=CENTER>"+imghtm+"</TD>\n");
       }
       else
@@ -663,8 +661,6 @@ public class hscaf_servlet extends HttpServlet
   private static void HScafsResults_1xN(HttpServletResponse response,ArrayList<ScaffoldTree> scaftrees,ArrayList<Scaffold> mcscafs)
       throws IOException,FileNotFoundException
   {
-    // This is our convention; Apache proxies the 8080 port via /tomcat.
-    String mol2img_servleturl=("http://"+SERVERNAME+"/tomcat"+CONTEXTPATH+"/mol2img");
     int n_mol=0;
     int w=sizes_w.get(params.getVal("size"));
     int h=sizes_h.get(params.getVal("size"));
@@ -677,7 +673,7 @@ public class hscaf_servlet extends HttpServlet
     thtm+=("<TR><TH></TH><TH>query</TH><TH>max common scaffold</TH><TH>mol</TH></TR>\n");
     String molnameQ=scaftrees.get(0).inmol.getName();
     String smilesQ=scaftrees.get(0).inmol.exportToFormat(smifmt_dep);
-    String imghtmQ=HtmUtils.Smi2ImgHtm(smilesQ,depopts,h-30,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
+    String imghtmQ=HtmUtils.Smi2ImgHtm(smilesQ,depopts,h-30,w,MOL2IMG_SERVLETURL,true,4,"go_zoom_smi2img");
     int n_total_scaf=0;
     for (int i=1;i<scaftrees.size();++i)
     {
@@ -694,7 +690,7 @@ public class hscaf_servlet extends HttpServlet
       if (mcscafs.size()>(i-1) && mcscafs.get(i-1)!=null)
       {
         String smiles_mcscaf=mcscafs.get(i-1).getSmi();
-        String imghtm_mcscaf=HtmUtils.Smi2ImgHtm(smiles_mcscaf,depopts,h-30,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
+        String imghtm_mcscaf=HtmUtils.Smi2ImgHtm(smiles_mcscaf,depopts,h-30,w,MOL2IMG_SERVLETURL,true,4,"go_zoom_smi2img");
         thtm+=("<TD ALIGN=CENTER VALIGN=TOP>"+imghtm_mcscaf+"<BR>\n");
         thtm+=(String.format("hscaf_Tanimoto = %.2f",sim)+"</TD>\n");
       }
@@ -702,7 +698,7 @@ public class hscaf_servlet extends HttpServlet
         thtm+=("<TD ALIGN=CENTER VALIGN=MIDDLE>~</TD>\n");
       String smiles=scaftrees.get(i).inmol.exportToFormat(smifmt_dep);
       String molname=scaftrees.get(i).inmol.getName();
-      String imghtm=HtmUtils.Smi2ImgHtm(smiles,depopts,h-30,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
+      String imghtm=HtmUtils.Smi2ImgHtm(smiles,depopts,h-30,w,MOL2IMG_SERVLETURL,true,4,"go_zoom_smi2img");
       thtm+=("<TD ALIGN=CENTER VALIGN=TOP>"+imghtm+"<BR>\n");
       thtm+=(molname.length()<35?molname:(molname.substring(0,31)+"...")+"</TD>\n");
       thtm+="</TR>\n";
@@ -725,7 +721,6 @@ public class hscaf_servlet extends HttpServlet
       throws IOException,FileNotFoundException
   {
     // This is our convention; Apache proxies the 8080 port via /tomcat.
-    String mol2img_servleturl=("http://"+SERVERNAME+"/tomcat"+CONTEXTPATH+"/mol2img");
     int n_mol=0;
     int w=sizes_w.get(params.getVal("size"))/2;
     int h=sizes_h.get(params.getVal("size"))/2;
@@ -745,7 +740,7 @@ public class hscaf_servlet extends HttpServlet
         n_total_scaf+=scaftrees.get(i).getScaffoldCount();
         ++n_mol;
         smiles=scaftrees.get(i).inmol.exportToFormat(smifmt_dep);
-        imghtm=HtmUtils.Smi2ImgHtm(smiles,depopts+"&bgcolor=%23DDDDDD",h,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
+        imghtm=HtmUtils.Smi2ImgHtm(smiles,depopts+"&bgcolor=%23DDDDDD",h,w,MOL2IMG_SERVLETURL,true,4,"go_zoom_smi2img");
         thtm+=("<TD ALIGN=CENTER VALIGN=TOP>"+imghtm+"</TD>\n");
       }
       else
@@ -758,7 +753,7 @@ public class hscaf_servlet extends HttpServlet
       if (scaftrees.get(i)!=null)
       {
         smiles=scaftrees.get(i).inmol.exportToFormat(smifmt_dep);
-        imghtm=HtmUtils.Smi2ImgHtm(smiles,depopts+"&bgcolor=%23DDDDDD",h,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
+        imghtm=HtmUtils.Smi2ImgHtm(smiles,depopts+"&bgcolor=%23DDDDDD",h,w,MOL2IMG_SERVLETURL,true,4,"go_zoom_smi2img");
         thtm+=("<TD ALIGN=CENTER VALIGN=TOP>"+imghtm+"</TD>\n");
       }
       else
@@ -770,7 +765,7 @@ public class hscaf_servlet extends HttpServlet
           mcscaf=((i<j)?mcscaf_matrix.get(i).get(j):mcscaf_matrix.get(j).get(i));
         if (mcscaf!=null)
         {
-          imghtm=HtmUtils.Smi2ImgHtm(mcscaf.getSmi(),depopts,h,w,mol2img_servleturl,true,4,"go_zoom_smi2img");
+          imghtm=HtmUtils.Smi2ImgHtm(mcscaf.getSmi(),depopts,h,w,MOL2IMG_SERVLETURL,true,4,"go_zoom_smi2img");
           thtm+=("<TD ALIGN=CENTER VALIGN=TOP>"+imghtm+"</TD>\n");
         }
         else
@@ -852,19 +847,16 @@ public class hscaf_servlet extends HttpServlet
   private static String HelpHtm()
   {
     return (
-    "<B>"+APPNAME+" Help</B><P>\n"+
+    "<H2>"+APPNAME+" Help</H2>\n"+
+    "Based on the HierS hierarchical scaffold algorithm (Wilkens, 2005).\n"+
+    "Built with package edu.unm.health.biocomp.hscaf\n"+
+    "(GitHub repo: <a href=\"https://github.com/unmtransinfo/unm_biocomp_hscaf\">unm_biocomp_hscaf</a>).\n"+
     "<P>\n"+
-    "Built with package edu.unm.health.biocomp.hscaf.\n"+
-    "API documentation <A HREF=\"http://"+SERVERNAME+"/tomcat/doc/hscaf/\">here</A>\n"+
+    "N_MAX = "+N_MAX+"\n"+
     "<P>\n"+
-    "See GitHub repo: <a href=\"https://github.com/jeremyjyang/unm-biocomp-hscaf.\">UNM-Biocomp-HScaf</a>\n"+
-    "for more info.\n"+
+    "Thanks to <a href=\"http://www.chemaxon.com\">ChemAxon</a> for the use of JChem in this application.\n"+
     "<P>\n"+
-    "configured with molecule limit N_MAX = "+N_MAX+"\n"+
-    "<P>\n"+
-    "Thanks to ChemAxon for the use of JChem in this application.\n"+
-    "<P>\n"+
-    "author/support: Jeremy Yang\n"
+    "Author/support: Jeremy Yang\n"
     );
   }
   /////////////////////////////////////////////////////////////////////////////
@@ -885,6 +877,7 @@ public class hscaf_servlet extends HttpServlet
     DEMOSMIFILE=conf.getInitParameter("DEMOSMIFILE");
     try { N_MAX=Integer.parseInt(conf.getInitParameter("N_MAX")); }
     catch (Exception e) { N_MAX=100; }
+    PROXY_PREFIX=((conf.getInitParameter("PROXY_PREFIX")!=null)?conf.getInitParameter("PROXY_PREFIX"):"");
   }
   /////////////////////////////////////////////////////////////////////////////
   public void doGet(HttpServletRequest request,HttpServletResponse response)

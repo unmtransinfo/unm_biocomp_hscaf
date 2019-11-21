@@ -1,13 +1,13 @@
 # `UNM_BIOCOMP_HSCAF` <img align="right" src="/doc/images/hscaf_logo.png">
 
-Implements the HierS hierarchical scaffold algorithm by Wilkens et al.
+Implements the HierS hierarchical scaffold algorithm (Wilkens, 2005).
 Designed for HierS scaffold analysis, for single molecules, datasets, or
 common-scaffold comparisons between pairs or groups of molecules.
 
 ## Dependencies
 * Java 8
 * Maven 3.5+
-* `unm_biocomp_depict`, `unm_biocomp_db`, `unm_biocomp_util`
+* `unm_biocomp_depict`, `unm_biocomp_util`
 * ChemAxon JChem (19.3.0 ok)
 * Access to [ChemAxon Maven repository](https://hub.chemaxon.com) (see [documentation](https://docs.chemaxon.com/display/docs/Public+Repository)).
   * Requires ChemAxon-Hub Artifactory credentials.
@@ -34,6 +34,12 @@ mvn --projects hscaf_war tomcat7:redeploy
 
 ```
 mvn exec:java -Dexec.mainClass="edu.unm.health.biocomp.hscaf.hier_scaffolds"
+-Dexec.args="-i test.smi -inc_mol -inc_scaf -o test_out.tsv -vvv"
+```
+
+```
+mvn exec:java -Dexec.mainClass="edu.unm.health.biocomp.hscaf.bm_scaffolds"
+-Dexec.args="-i test.smi"
 ```
 
 Developed at the [UNM Translational Informatics Division](http://datascience.unm.edu).
