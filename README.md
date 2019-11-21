@@ -5,9 +5,11 @@ Designed for HierS scaffold analysis, for single molecules, datasets, or
 common-scaffold comparisons between pairs or groups of molecules.
 
 ## Dependencies
+
 * Java 8
 * Maven 3.5+
-* `unm_biocomp_depict`, `unm_biocomp_util`
+* [`unm_biocomp_depict`](https://github.com/unmtransinfo/unm_biocomp_depict)
+* [`unm_biocomp_util`](https://github.com/unmtransinfo/unm_biocomp_util)
 * ChemAxon JChem (19.3.0 ok)
 * Access to [ChemAxon Maven repository](https://hub.chemaxon.com) (see [documentation](https://docs.chemaxon.com/display/docs/Public+Repository)).
   * Requires ChemAxon-Hub Artifactory credentials.
@@ -33,13 +35,11 @@ mvn --projects hscaf_war tomcat7:redeploy
 ## Usage
 
 ```
-mvn exec:java -Dexec.mainClass="edu.unm.health.biocomp.hscaf.hier_scaffolds"
--Dexec.args="-i test.smi -inc_mol -inc_scaf -o test_out.tsv -vvv"
+mvn exec:java -Dexec.mainClass="edu.unm.health.biocomp.hscaf.hier_scaffolds" -Dexec.args="-i test.smi -inc_mol -inc_scaf -o test_out.smi -out_scaf test_scaf.smi -vvv"
 ```
 
 ```
-mvn exec:java -Dexec.mainClass="edu.unm.health.biocomp.hscaf.bm_scaffolds"
--Dexec.args="-i test.smi"
+mvn exec:java -Dexec.mainClass="edu.unm.health.biocomp.hscaf.bm_scaffolds" -Dexec.args="-i test.smi"
 ```
 
 Developed at the [UNM Translational Informatics Division](http://datascience.unm.edu).
