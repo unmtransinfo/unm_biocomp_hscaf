@@ -43,6 +43,7 @@ public class hier_scaffolds
   private static Boolean scaflist_title=false;
   private static Boolean scaflist_append2title=false;
   private static String scaflist_sdtag="HSCAF_SCAFLIST";
+  private static String scaftree_sdtag="HSCAF_SCAFTREE";
   private static Boolean show_js=false;
 
   private static Boolean bdb=false;
@@ -565,6 +566,7 @@ public class hier_scaffolds
       else if (scaflist_append2title)
         outmol.setName(mol.getName()+" "+scaflist_str);
       outmol.setProperty(scaflist_sdtag, scaflist_str);
+      outmol.setProperty(scaftree_sdtag, scaftree.toString());
 
       int n_link=0;
       for (Linker link: scaftree.getLinkers())
