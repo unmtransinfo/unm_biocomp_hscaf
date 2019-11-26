@@ -14,12 +14,10 @@ import chemaxon.marvin.io.MolExportException;
 import edu.unm.health.biocomp.util.db.*;
 import edu.unm.health.biocomp.util.*;
 
-
 /**	Bemis-Murko scaffolds application.  Run program with
 	no args for command-line help.
 	<br>
 	@author Jeremy J Yang
-	@see edu.unm.health.biocomp.hscaf.BMScaffold
 */
 public class bm_scaffolds
 {
@@ -35,15 +33,16 @@ public class bm_scaffolds
   private static int maxrings=10;
   private static int nmax=0;
   private static int nskip=0;
-  private static String smifmt="cxsmiles:u-L-l-e-d-D-p-R-f-w-a"; //Kekule
+  private static String SMFMT_HSCAF="cxsmiles:u-L-l-e-d-D-p-R-f-w-a"; //Kekule
+  private static String SMIFMT_OUT="smiles:+n-a-H"; //Kekule, H-implicit
+  private static String SMIFMT_TSV="smiles:+n-a-HT*"; //Kekule, H-implicit, noHeader
 
   private static void Help(String msg)
   {
     System.err.println(msg+"\n"
       +"bm_scaffolds - Bemis-Murko scaffolds analyzer\n"
       +"\n"
-      +"From the University of New Mexico Translational Informatics Division\n"
-      +"(http://medicine.unm.edu/informatics/).\n"
+      +"UNM Translational Informatics Division\n"
       +"\n"
       +"usage: bm_scaffolds [options]\n"
       +"\n"
@@ -103,16 +102,15 @@ public class bm_scaffolds
     if (ofile!=null)
     {
       String ofmt=MFileFormatUtil.getMostLikelyMolFormat(ofile);
-      if (ofmt.equals("smiles")) ofmt="smiles:+n-a-H"; //Kekule for compatibility, H-implicitized
-      molWriter=new MolExporter(new FileOutputStream(ofile,false),ofmt);
+      if (ofmt.equals("smiles")) ofmt=SMIFMT_TSV;
+      molWriter = new MolExporter(new FileOutputStream(ofile, false), ofmt);
     }
     else
     {
-      molWriter=new MolExporter(System.out,"smiles:+n-a-H");
+      molWriter = new MolExporter(System.out, SMIFMT_TSV);
     }
     //if (verbose>1)
-      //System.err.println("JChem version: "+com.chemaxon.version.VersionInfo.getVersion()); //v6.3+
-      //System.err.println("JChem version: "+chemaxon.jchem.version.VersionInfo.JCHEM_VERSION);
+    //  System.err.println("JChem version: "+com.chemaxon.version.VersionInfo.getVersion()); //v6.3+
 
     Molecule mol;
     Molecule outmol = new Molecule();
@@ -140,68 +138,65 @@ public class bm_scaffolds
       ++n_mol;
       if (nskip>0 && n_mol<=nskip) continue;
 
-      String molname=mol.getName();
       if (verbose>1)
       {
-        System.err.println(""+n_mol+". "+molname);
-        try { System.err.println("\t"+MolExporter.exportToFormat(mol,smifmt)); }
+        System.err.println(""+n_mol+". "+mol.getName());
+        try { System.err.println("\t"+MolExporter.exportToFormat(mol, SMFMT_HSCAF)); }
         catch (MolExportException e) { System.err.println(e.getMessage()); }
         catch (IOException e) { System.err.println(e.getMessage()); }
       }
       if (mol.getAtomCount()>maxatoms)
       {
         if (verbose>1)
-          System.err.println("Warning: skipping mol; natoms="+mol.getAtomCount() +">"+ +maxatoms+" ["+n_mol+"] "+molname);
+          System.err.println("Warning: skipping mol; natoms="+mol.getAtomCount() +">"+ +maxatoms+" ["+n_mol+"] "+mol.getName());
         ++n_mol_toobig;
         ok=false;
       }
       if (mol.getFragCount(MoleculeGraph.FRAG_BASIC)>1)
       {
         if (verbose>1)
-          System.err.println("Warning: multi-frag mol; analyzing largest frag only: ["+n_mol+"] "+molname);
+          System.err.println("Warning: multi-frag mol; analyzing largest frag only: ["+n_mol+"] "+mol.getName());
         ++n_mol_frag;
         mol=hier_scaffolds_utils.LargestPart(mol);
       }
       outmol.clear();
       outmol.setName(mol.getName());
-      outmol.fuse(mol.cloneMolecule(),true);
+      outmol.fuse(mol.cloneMolecule(), true);
       if (!ok)
       {
-        if (ofile!=null) { if (!WriteMol(molWriter,outmol)) ++n_err; }
+        if (!WriteMol(molWriter, outmol)) ++n_err;
         continue;
       }
 
-      BMScaffold scaf = new BMScaffold(mol,stereo,keep_nitro_attachments);
+      BMScaffold scaf = new BMScaffold(mol, stereo, keep_nitro_attachments);
       
-      String scafsmi=scaf.getSmi(); //Kekule, for compatibility
+      String scafsmi=scaf.getSmi();
       if (scafsmi!=null && !scafsmi.isEmpty())
       {
-        outmol.setName(mol.getName()+" "+scafsmi);
-        outmol.setProperty("SCAFSMI",scafsmi);
+        outmol.setProperty("BMSCAFSMI", scafsmi);
         ++n_total_scaf;
       }
 
       if (verbose>1)
       {
         System.err.println("\tscaf: "+(show_js?scaf.getJsmi():scaf.getSmi()));
-        //System.err.println("\tDEBUG: "+hscaf_utils.ScaffoldSmarts(scaf));
         System.err.println("");
       }
 
-      if (ofile!=null) { if (!WriteMol(molWriter,outmol)) ++n_err; }
+      if (!WriteMol(molWriter, outmol)) ++n_err;
       if (verbose>0 && n_mol%n_chunk==0)
       {
         System.err.print(" mols: "+n_mol+"; errors: "+n_err+": tod: "+time_utils.CurrentTime());
         java.util.Date t_j = new java.util.Date();
-        System.err.print("; elapsed: "+time_utils.TimeDeltaStr(t_0,t_j)+"; dt: "+time_utils.TimeDeltaStr(t_i,t_j));
-        System.err.println("; @: \""+molname+"\"");
+        System.err.print("; elapsed: "+time_utils.TimeDeltaStr(t_0, t_j)+"; dt: "+time_utils.TimeDeltaStr(t_i, t_j));
+        System.err.println("; @: \""+mol.getName()+"\"");
         t_i=t_j;
       }
       if (nmax>0 && n_mol==(nmax+nskip)) break;
     }
 
     molWriter.close();
-    System.err.println("Total elapsed time: "+time_utils.TimeDeltaStr(t_0,new java.util.Date()));
+    System.err.println("Total elapsed time: "+time_utils.TimeDeltaStr(t_0, new java.util.Date()));
     if (verbose>0)
       System.err.println(DateFormat.getDateTimeInstance().format(new java.util.Date()));
     System.err.println("Total input mols: "+n_mol);
@@ -217,7 +212,7 @@ public class bm_scaffolds
     System.exit(0);
   }
   /////////////////////////////////////////////////////////////////////////////
-  private static boolean WriteMol(MolExporter molWriter,Molecule mol)
+  private static boolean WriteMol(MolExporter molWriter, Molecule mol)
   {
     try { molWriter.write(mol); }
     catch (Exception e) {
