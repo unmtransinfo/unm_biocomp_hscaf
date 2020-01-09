@@ -63,7 +63,7 @@ public class hscaf_servlet extends HttpServlet
   private static int SERVERPORT=0;
   private static String SERVERNAME=null;
   private static String REMOTEHOST=null;
-  private static String datestr=null;
+  private static String DATESTR=null;
   private static String color1="#EEEEEE";
   private static String smifmt="cxsmiles:u-L-l-e-d-D-p-R-f-w";
   private static String smifmt_dep="cxsmiles:u-L-e-d-D-p-R-f-w"; // "l" for labels/aliases ("J")
@@ -210,15 +210,15 @@ ArrayList<String>(Arrays.asList(PROXY_PREFIX+CONTEXTPATH+"/css/biocomp.css"));
 
     Calendar calendar=Calendar.getInstance();
     calendar.setTime(new Date());
-    datestr=String.format("%04d%02d%02d%02d%02d",
-      calendar.get(Calendar.YEAR),
-      calendar.get(Calendar.MONTH)+1,
-      calendar.get(Calendar.DAY_OF_MONTH),
-      calendar.get(Calendar.HOUR_OF_DAY),
-      calendar.get(Calendar.MINUTE));
+    DATESTR = String.format("%04d%02d%02d%02d%02d", calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH)+1, calendar.get(Calendar.DAY_OF_MONTH), calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE));
     Random rand = new Random();
-    PREFIX=SERVLETNAME+"."+datestr+"."+String.format("%03d",rand.nextInt(1000));
+    PREFIX = SERVLETNAME+"."+DATESTR+"."+String.format("%03d",rand.nextInt(1000));
 
+    try {
+      LicenseManager.setLicenseFile(CONTEXT.getRealPath("")+"/.chemaxon/license.cxl");
+    } catch (Exception e) {
+      errors.add("ERROR: ChemAxon LicenseManager error: "+e.getMessage());
+    }
     LicenseManager.refresh();
     if (!LicenseManager.isLicensed(LicenseManager.JCHEM))
     {
@@ -239,8 +239,7 @@ ArrayList<String>(Arrays.asList(PROXY_PREFIX+CONTEXTPATH+"/css/biocomp.css"));
 
     if (params.isChecked("verbose"))
     {
-      //errors.add("JChem version: "+chemaxon.jchem.version.VersionInfo.JCHEM_VERSION);
-      //errors.add("JChem version: "+com.chemaxon.version.VersionInfo.getVersion()); //v6.3+
+      errors.add("JChem version: "+com.chemaxon.version.VersionInfo.getVersion());
       errors.add("server: "+CONTEXT.getServerInfo());
     }
 
