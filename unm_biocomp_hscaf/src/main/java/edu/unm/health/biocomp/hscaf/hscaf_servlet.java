@@ -32,7 +32,7 @@ import edu.unm.health.biocomp.util.http.*;
     @WebInitParam(name = "PROXY_PREFIX", value = "/tomcat"), //Could be in web.xml?
     @WebInitParam(name = "APPNAME", value = "HScaf"),
     @WebInitParam(name = "UPLOADDIR", value = "/tmp"),
-    @WebInitParam(name = "SCRATCHDIR", value = "/scratch"),
+    @WebInitParam(name = "SCRATCHDIR", value = "/tmp"),
     @WebInitParam(name = "N_MAX", value = "200"),
     @WebInitParam(name = "MAX_POST_SIZE", value = "10485760"),
     @WebInitParam(name = "DEMOSMIFILE", value = "/data/hscaf_testset.smi")
@@ -40,16 +40,17 @@ import edu.unm.health.biocomp.util.http.*;
 )
 public class hscaf_servlet extends HttpServlet
 {
+  private static String APPNAME=null;	// WebInitParam
+  private static String UPLOADDIR=null;	// WebInitParam
+  private static String SCRATCHDIR=null;      // WebInitParam
+  private static String DEMOSMIFILE=null;      // WebInitParam
+  private static String PROXY_PREFIX=null; // WebInitParam
+  private static int N_MAX=100; // WebInitParam
   private static String SERVLETNAME=null;
   private static String CONTEXTPATH=null;
-  private static String APPNAME=null;	// configured in web.xml
-  private static String UPLOADDIR=null;	// configured in web.xml
-  private static String SCRATCHDIR=null;      // configured in web.xml
   private static String SCRATCHDIR_PATH=null;
-  private static String DEMOSMIFILE=null;      // configured in web.xml
   private static String PREFIX=null;
   private static int scratch_retire_sec=3600;
-  private static int N_MAX=100; // configured in web.xml
   private static ServletContext CONTEXT=null;
   //private static ServletConfig CONFIG=null;
   private static ResourceBundle rb=null;
@@ -69,7 +70,6 @@ public class hscaf_servlet extends HttpServlet
   private static String smifmt_dep="cxsmiles:u-L-e-d-D-p-R-f-w"; // "l" for labels/aliases ("J")
   private static File fout=null;
   private static File fout_scaf=null;
-  private static String PROXY_PREFIX=null; // configured in web.xml
   private static String MOL2IMG_SERVLETURL=null;
 
   /////////////////////////////////////////////////////////////////////////////

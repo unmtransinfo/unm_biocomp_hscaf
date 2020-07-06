@@ -6,31 +6,7 @@
   <display-name>HScaf webapp</display-name>
   <description>HScaf web application</description>
 
-<!-- NOW HANDLED BY ANNOTATIONS -->
-<!-- 
-  <servlet>
-    <servlet-name>hscaf</servlet-name>
-    <servlet-class>edu.unm.health.biocomp.hscaf.hscaf_servlet</servlet-class>
-    <init-param> <param-name>APPNAME</param-name>
-      <param-value>HScaf</param-value> </init-param>
-    <init-param> <param-name>UPLOADDIR</param-name>
-      <param-value>/tmp</param-value> </init-param>
-    <init-param> <param-name>LOGDIR</param-name>
-      <param-value>${catalina.home}/logs</param-value></init-param>
-    <init-param> <param-name>SCRATCHDIR</param-name>
-      <param-value>${catalina.home}/webapps/hscaf/scratch</param-value></init-param>
-    <init-param> <param-name>N_MAX</param-name>
-      <param-value>200</param-value> </init-param>
-    <init-param><param-name>MAX_POST_SIZE</param-name>
-      <param-value>10485760</param-value></init-param>
-    <init-param> <param-name>DEMOSMIFILE</param-name>
-      <param-value>${catalina.home}/webapps/hscaf/data/hscaf_testset.smi</param-value></init-param>
-  </servlet>
-  <servlet-mapping>
-    <servlet-name>hscaf</servlet-name>
-    <url-pattern>/hscaf</url-pattern>
-  </servlet-mapping>
--->
+  <!-- HSCAF PARAMS NOW HANDLED BY ANNOTATIONS -->
 
   <servlet>
     <servlet-name>mol2img</servlet-name>
