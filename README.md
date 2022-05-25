@@ -35,14 +35,14 @@ mvn --projects hscaf_war tomcat7:redeploy
 ## Usage
 
 ```
-mvn exec:java -Dexec.mainClass="edu.unm.health.biocomp.hscaf.hier_scaffolds" -Dexec.args="-i test.smi -inc_mol -inc_scaf -o test_out.smi -out_scaf test_scaf.smi -vvv"
+mvn --projects unm_biocomp_hscaf exec:java -Dexec.mainClass="edu.unm.health.biocomp.hscaf.hier_scaffolds" -Dexec.args="-i hscaf_testset.smi -inc_mol -inc_scaf -o hscaf_testset_out.smi -out_scaf hscaf_testset_scaf.smi -vvv"
 ```
 
 ```
-mvn exec:java -Dexec.mainClass="edu.unm.health.biocomp.hscaf.bm_scaffolds" -Dexec.args="-i test.smi"
+mvn --projects unm_biocomp_hscaf exec:java -Dexec.mainClass="edu.unm.health.biocomp.hscaf.bm_scaffolds" -Dexec.args="-i hscaf_testset.smi"
 ```
 
-Developed at the [UNM Translational Informatics Division](http://datascience.unm.edu).
+Developed at the [UNM Translational Informatics Division](https://datascience.unm.edu).
 
-* [Public web app](http://pasilla.health.unm.edu/tomcat/hscaf)
+* [Public web app](https://datascience.unm.edu/tomcat/hscaf)
 * HierS: hierarchical scaffold clustering using topological chemical graphs. Wilkens SJ(1), Janes J, Su AI. J Med Chem. 2005 May 5;48(9):3182-93.

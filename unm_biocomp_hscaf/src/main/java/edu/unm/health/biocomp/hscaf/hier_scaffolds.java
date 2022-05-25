@@ -6,12 +6,17 @@ import java.util.regex.*;
 import java.text.DateFormat;
 import java.sql.*;
 
+import org.apache.commons.cli.*; // CommandLine, CommandLineParser, HelpFormatter, Option
+Builder, Options, ParseException, PosixParser
+import org.apache.commons.cli.Option.*; // Builder
+
 import com.sleepycat.je.DatabaseException; // Some versions ".db." instead of ".je."?
 
 import chemaxon.formats.*;
 import chemaxon.sss.search.*;
 import chemaxon.struc.*;
 import chemaxon.marvin.io.MolExportException;
+import chemaxon.license.*; // LicenseManager
 
 import edu.unm.health.biocomp.util.db.*;
 import edu.unm.health.biocomp.util.*;
