@@ -220,9 +220,55 @@ public class hier_scaffolds
     }
   }
   /////////////////////////////////////////////////////////////////////////////
-  public static void main(String[] args)
-    throws IOException, DatabaseException
+  public static void main(String[] args) throws IOException, DatabaseException
   {
+    String HELPHEADER = "hier_scaffolds - HierS scaffolds analyzer";
+    Options opts = new Options();
+    opts.addOption(Option.builder("i").required().hasArg().desc("Input molecule file").build());
+    opts.addOption(Option.builder("o").hasArg().desc("Output file, one (possibly) disconnected mol of parts per input mol (.smi|.sdf)").build());
+    opts.addOption(Option.builder("out_scaf").hasArg().desc("unique scafs numbered sequentially (new + db) (.smi|.sdf)").build());
+    opts.addOption(Option.builder("inc_mol").hasArg().desc("include mols in output (-o)").build());
+    opts.addOption(Option.builder("inc_scaf").hasArg().desc("include scaffolds in output (-o)").build());
+    opts.addOption(Option.builder("inc_link").hasArg().desc("include linkers in output (-o)").build());
+    opts.addOption(Option.builder("inc_chain").hasArg().desc("include sidechains in output (-o)").build());
+    opts.addOption(Option.builder("scaflist_title").hasArg().desc("scaf/link/chain list written to title").build());
+    opts.addOption(Option.builder("scaflist_append2title").hasArg().desc("scaf/link/chain list appended to title").build());
+    opts.addOption(Option.builder("scaflist_sdtag").hasArg().desc("scaf list written to SD dataitem").build());
+    opts.addOption(Option.builder("append2ofile").hasArg().desc("output mols appended to -o OFILE (resume mode)").build());
+    opts.addOption(Option.builder("show_js").hasArg().desc("show junctions (as pseudoatoms) -- for debugging, visualizing").build());
+    opts.addOption(Option.builder("keep_nitro_attachments").hasArg().desc("atoms single bonded to ring N remain in scaffold").build());
+    opts.addOption(Option.builder("stereo").hasArg().desc("stereo scaffolds (default non-stereo)").build());
+    opts.addOption(Option.builder("maxatoms").type(Number.class).hasArg().desc("max atom count of input mol ["+maxatoms+"]").build());
+    opts.addOption(Option.builder("maxrings").type(Number.class).hasArg().desc("max ring count of input mol ["+maxrings+"]").build());
+    opts.addOption(Option.builder("rdb").hasArg().desc("use RDB for storage and performance").build());
+    opts.addOption(Option.builder("rdb_keep").hasArg().desc("keep RDB tables after job completion").build());
+    opts.addOption(Option.builder("rdb_predelete").hasArg().desc("initially delete RDB (if existing)").build());
+    opts.addOption(Option.builder("rdb_resume").hasArg().desc("resume job using existing RDB").build());
+      
+    opts.addOption(Option.builder("rdb_dump").hasArg().desc("dump existing RDB").build());
+    opts.addOption(Option.builder("rdb_host").hasArg().desc("RDB host ["+rdb_host+"]").build());
+    opts.addOption(Option.builder("rdb_port").type(Number.class).hasArg().desc("RDB port ["+rdb_port+"]").build());
+    opts.addOption(Option.builder("rdb_name").hasArg().desc("RDB db name").build());
+    opts.addOption(Option.builder("rdb_schema").hasArg().desc("RDB db schema ["+rdb_schema+"]").build());
+    opts.addOption(Option.builder("rdb_user").hasArg().desc("RDB db user ["+rdb_user+"]").build());
+    opts.addOption(Option.builder("rdb_pw").hasArg().desc("RDB db password").build());
+    opts.addOption(Option.builder("rdb_tableprefix").hasArg().desc("RDB db table prefix").build());
+    opts.addOption(Option.builder("rdb_reindex_per").hasArg().desc("RDB reindex once per N mols ["+rdb_reindex_per+"]").build());
+    opts.addOption(Option.builder("bdb").hasArg().desc("").build());
+    opts.addOption(Option.builder("bdb_dir").hasArg().desc("").build());
+    opts.addOption(Option.builder("bdb_keep").hasArg().desc("").build());
+    opts.addOption(Option.builder("bdb_resume").hasArg().desc("").build());
+    opts.addOption(Option.builder("bdb_predelete").hasArg().desc("").build());
+    opts.addOption(Option.builder("bdb_dump").hasArg().desc("dump existing BerkeleyDB at BDBDIR").build());
+    opts.addOption(Option.builder("ddb").hasArg().desc("").build());
+    opts.addOption(Option.builder("ddb_dir").hasArg().desc("").build());
+    opts.addOption(Option.builder("ddb_keep").hasArg().desc("").build());
+    opts.addOption(Option.builder("ddb_resume").hasArg().desc("").build());
+    opts.addOption(Option.builder("ddb_predelete").hasArg().desc("").build());
+    opts.addOption(Option.builder("ddb_dump").hasArg().desc("").build());
+    opts.addOption(Option.builder("nmax").type(Number.class).hasArg().desc("quit after NMAX molecules").build());
+    opts.addOption(Option.builder("nskip").type(Number.class).hasArg().desc("skip NSKIP molecules").build());
+
     ParseCommand(args);
 
     /// Mode of operation:
