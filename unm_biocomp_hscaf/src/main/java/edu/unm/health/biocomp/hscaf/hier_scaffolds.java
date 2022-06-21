@@ -6,8 +6,7 @@ import java.util.regex.*;
 import java.text.DateFormat;
 import java.sql.*;
 
-import org.apache.commons.cli.*; // CommandLine, CommandLineParser, HelpFormatter, Option
-Builder, Options, ParseException, PosixParser
+import org.apache.commons.cli.*; // CommandLine, CommandLineParser, HelpFormatter, Option Builder, Options, ParseException, PosixParser
 import org.apache.commons.cli.Option.*; // Builder
 
 import com.sleepycat.je.DatabaseException; // Some versions ".db." instead of ".je."?
