@@ -35,11 +35,11 @@ mvn --projects hscaf_war tomcat7:redeploy
 ## Usage
 
 ```
-mvn --projects unm_biocomp_hscaf exec:java -Dexec.mainClass="edu.unm.health.biocomp.hscaf.hier_scaffolds" -Dexec.args="-i hscaf_testset.smi -inc_mol -inc_scaf -o hscaf_testset_out.smi -out_scaf hscaf_testset_scaf.smi -vvv"
+java -classpath unm_biocomp_hscaf-0.0.1-SNAPSHOT-jar-with-dependencies.jar edu.unm.health.biocomp.hscaf.hier_scaffolds -i hscaf_testset.smi -inc_mol -inc_scaf -o hscaf_testset_out.smi -out_scaf hscaf_testset_scaf.smi -vvv
 ```
 
 ```
-mvn --projects unm_biocomp_hscaf exec:java -Dexec.mainClass="edu.unm.health.biocomp.hscaf.bm_scaffolds" -Dexec.args="-i hscaf_testset.smi"
+java -classpath unm_biocomp_hscaf-0.0.1-SNAPSHOT-jar-with-dependencies.jar edu.unm.health.biocomp.hscaf.bm_scaffolds -i hscaf_testset.smi
 ```
 
 Developed at the [UNM Translational Informatics Division](https://datascience.unm.edu).
